@@ -1,0 +1,17 @@
+{
+  "plugin": "webos",
+  "source": "plugins/webos/src/config.rs",
+  "config_version": 1,
+  "root": "WebosConfig",
+  "structs": {
+    "WebosConfig": {
+      "url": { "type": "string", "format": "url", "schemes": ["ws", "wss"] },
+      "cert_sha256": { "type": "string", "optional": true, "nullable": true, "format": "sha256_hex" },
+      "wol_mac": { "type": "string", "optional": true, "nullable": true, "format": "mac" },
+      "wol_broadcast": { "type": "string", "optional": true, "nullable": true, "format": "socket" }
+    }
+  },
+  "pin_only_for_wss": true,
+  "secrets": [{ "slot": "client_key", "required": true }],
+  "example": { "url": "ws://t:3000", "wol_mac": "aa:bb:cc:dd:ee:ff" }
+}

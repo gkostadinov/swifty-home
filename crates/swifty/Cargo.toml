@@ -1,0 +1,113 @@
+[package]
+name = "swifty"
+description = "Swifty Home, a self-hosted smart home hub. One binary: `swifty serve` runs the hub, the rest is its command line"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+name = "swifty"
+path = "src/lib.rs"
+
+[[bin]]
+name = "swifty"
+path = "src/main.rs"
+
+[features]
+default = ["all-plugins"]
+# Every first-party plugin. A build with fewer names them: `--no-default-features --features wiz,hue`.
+all-plugins = [
+    "wiz",
+    "hue",
+    "sonos",
+    "webos",
+    "tuya",
+    "toshiba",
+    "petkit",
+    "moonraker",
+    "proxmox",
+    "plex",
+    "camera",
+    "glimdock",
+    "mock",
+]
+wiz = ["dep:swifty-plugin-wiz"]
+hue = ["dep:swifty-plugin-hue"]
+sonos = ["dep:swifty-plugin-sonos"]
+webos = ["dep:swifty-plugin-webos"]
+tuya = ["dep:swifty-plugin-tuya"]
+toshiba = ["dep:swifty-plugin-toshiba"]
+petkit = ["dep:swifty-plugin-petkit"]
+moonraker = ["dep:swifty-plugin-moonraker"]
+proxmox = ["dep:swifty-plugin-proxmox"]
+plex = ["dep:swifty-plugin-plex"]
+camera = ["dep:swifty-plugin-camera"]
+glimdock = ["dep:swifty-plugin-glimdock"]
+mock = ["dep:swifty-plugin-mock"]
+
+[dependencies]
+axum.workspace = true
+clap.workspace = true
+# The CLI's own reads and writes of the hub's database (`plugin secret set`, `plugin list`).
+rusqlite.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+swifty-hub.workspace = true
+swifty-plugin-api.workspace = true
+swifty-plugin-camera = { workspace = true, optional = true }
+swifty-plugin-glimdock = { workspace = true, optional = true }
+swifty-plugin-hue = { workspace = true, optional = true }
+swifty-plugin-mock = { workspace = true, optional = true }
+swifty-plugin-moonraker = { workspace = true, optional = true }
+swifty-plugin-petkit = { workspace = true, optional = true }
+swifty-plugin-plex = { workspace = true, optional = true }
+swifty-plugin-proxmox = { workspace = true, optional = true }
+swifty-plugin-sonos = { workspace = true, optional = true }
+swifty-plugin-toshiba = { workspace = true, optional = true }
+swifty-plugin-tuya = { workspace = true, optional = true }
+swifty-plugin-webos = { workspace = true, optional = true }
+swifty-plugin-wiz = { workspace = true, optional = true }
+tokio.workspace = true
+# Reads templates/plugin/classes.toml for `swifty plugin new`.
+toml.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+# Switching to the owner of the data directory when run as root, the user's
+# name for the audit log, and free space for `swifty doctor`.
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+# Reading a secret at the console without showing it (`swifty plugin add`).
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Console"] }
+
+# The integration tests of the hub and its devices live here, next to the binary
+# they start, and use these directly.
+[dev-dependencies]
+aes.workspace = true
+async-trait.workspace = true
+base64.workspace = true
+crc32fast.workspace = true
+futures-util.workspace = true
+hex.workspace = true
+http-body-util.workspace = true
+rcgen.workspace = true
+reqwest.workspace = true
+rusqlite.workspace = true
+swifty-net.workspace = true
+swifty-plugin-api.workspace = true
+# The legacy house the tests run against: its scene levels and notes, and the
+# mock plugin's custom action.
+swifty-plugin-mock.workspace = true
+swifty-plugin-testkit.workspace = true
+tempfile.workspace = true
+tokio-rustls.workspace = true
+tokio-tungstenite.workspace = true
+tower.workspace = true
+url.workspace = true
+webauthn-authenticator-rs.workspace = true
+webauthn-rs.workspace = true
+webauthn-rs-proto.workspace = true

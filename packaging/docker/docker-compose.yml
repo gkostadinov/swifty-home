@@ -1,0 +1,56 @@
+# Swifty Home with Docker Compose.
+#
+# First run, from this directory. Use the address people will type to reach the hub:
+#   docker compose run --rm swifty-home init --yes --origin https://home.example.org
+#   docker compose up -d
+# The init command prints a link with a one-time token: open it to create the owner passkey.
+#
+# With the Caddy reverse proxy below (edit ../caddy/Caddyfile first):
+#   docker compose --profile caddy up -d
+#
+# To try it on this machine only, use --origin http://localhost:8790 and skip Caddy.
+# Other commands run the same way, for example:
+#   docker compose run --rm swifty-home plugin add hue
+#   docker compose run --rm swifty-home go-live && docker compose restart swifty-home
+#   docker compose run --rm swifty-home doctor
+
+services:
+  swifty-home:
+    # The image the project publishes with each release, or build it here with
+    # `docker compose build` from a checkout.
+    image: ghcr.io/gkostadinov/swifty-home:latest
+    build:
+      context: ../..
+      dockerfile: packaging/docker/Dockerfile
+    # Host networking is required: discovery uses UDP broadcast and multicast, and
+    # Wake-on-LAN sends broadcast packets, none of which cross Docker's NAT. The hub then
+    # listens on the host's 127.0.0.1:8790, which keeps it off the network.
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - config:/etc/swifty-home
+      - data:/var/lib/swifty-home
+    tmpfs:
+      - /tmp
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  caddy:
+    image: caddy:2
+    profiles:
+      - caddy
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - ../caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  config:
+  data:
+  caddy-data:
+  caddy-config:

@@ -1,0 +1,53 @@
+# cargo-deny: licences, advisories, banned crates and sources for the whole
+# workspace. `cargo deny --locked check` runs in CI. services/swifty-speech is
+# its own workspace and is not checked here.
+
+[graph]
+# The platforms the hub is built for: Linux for installs, Windows for development.
+targets = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu", "x86_64-pc-windows-msvc"]
+
+[advisories]
+version = 2
+# Every advisory in the RustSec database fails the check, unmaintained and
+# unsound crates included. An exception goes here with its id and a reason.
+ignore = [
+    # The Marvin attack: an RSA private key can leak through the timing of decryption or
+    # signing. `rsa` reaches the hub only through webauthn-rs (crypto-glue), which uses it to
+    # verify the signatures of RSA passkeys with their public keys. The hub holds no RSA
+    # private key and never decrypts or signs with one, so the attack has nothing to time.
+    # The fixed rsa 0.10.0 cannot be used yet: crypto-glue 0.2.2 asks for a feature that
+    # release removed. Drop this line when webauthn-rs moves to it.
+    { id = "RUSTSEC-2023-0071", reason = "rsa only verifies passkey signatures; the hub holds no RSA private key" },
+]
+
+[licenses]
+version = 2
+# What the dependency tree uses today, and nothing that would make the hub's
+# Apache-2.0 licence hard to honour. A new licence needs a look before it is added.
+allow = [
+    "Apache-2.0",
+    "BSD-3-Clause",
+    "CDLA-Permissive-2.0", # webpki-roots: the Mozilla root certificates
+    "ISC",
+    "MIT",
+    "MPL-2.0",             # webauthn-rs and its crates, used unmodified
+    "Unicode-3.0",
+    "Zlib",
+]
+confidence-threshold = 0.9
+
+[licenses.private]
+# The workspace's own crates are not published; their licence is in the root.
+ignore = true
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+# Path dependencies inside the workspace carry no version on purpose.
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

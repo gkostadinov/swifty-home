@@ -1,0 +1,16 @@
+target/
+*.swp
+.DS_Store
+
+# What a hub writes, and the secrets it reads, when it is run from a checkout.
+*.db
+*.db-wal
+*.db-shm
+*.key
+*.pem
+*.token
+*.login
+.env*
+/swifty.toml
+/config.toml
+/secrets/

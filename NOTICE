@@ -1,0 +1,121 @@
+Swifty Home
+Copyright 2026 the Swifty Home contributors.
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Swifty Home talks to devices and services made by other companies. Their names
+(Philips Hue, WiZ, Sonos, LG webOS, Tuya, Toshiba, Petkit, Klipper/Moonraker,
+Proxmox and others) are trademarks of their owners and are used only to say what
+a plugin works with. Swifty Home is not affiliated with or endorsed by any of them.
+
+
+The mascot
+----------
+
+Swifty, the bird, is an original drawing by the project's author. The 3D figure in
+the web app is drawn in code from that drawing. Both are part of this product and
+are distributed under the same licence. As section 6 of the Apache License says,
+the licence grants no right to use the names "Swifty Home", "Swifty" or
+"Glimdock", or the mascot, as a mark for another product.
+
+
+Unofficial cloud integrations
+-----------------------------
+
+The Toshiba and Petkit plugins reach the vendors' cloud services through
+interfaces that the vendors do not document or offer to third parties. They work
+the way each vendor's own phone app does. Using them may be against the vendor's
+terms of service, and they can stop working whenever the vendor changes
+something. They are marked "unofficial" in the app, and each one's setup begins
+with this warning. Use them at your own risk.
+
+
+Where the protocol knowledge came from
+--------------------------------------
+
+Several plugins speak protocols that their vendors do not publish. What they
+know about those protocols was learned from the open-source projects and public
+documents below. In each case only facts about the protocol were used (message
+layouts, field names, codes, paths and the values a server accepts). No source
+code, and no table or test data in its original form, was copied from any of
+them into Swifty Home. Each plugin's DEVELOPING.md lists the sources in detail.
+
+  toshiba-ac (Toshiba-AC-control), by Kamil Sroka and contributors
+    https://github.com/KaSroka/Toshiba-AC-control
+    Licence: Apache License 2.0.
+    Used by the Toshiba plugin: the cloud's sign-in, unit list and state paths,
+    the device registration, the layout of the compact unit state, the mode and
+    fan codes, and the shape of the command message.
+
+  pypetkitapi (py-petkit-api), by Jezza34000 and contributors
+    https://github.com/Jezza34000/py-petkit-api
+    Licence: MIT License.
+    Used by the Petkit plugin: the sign-in, the regional servers, the headers
+    and client description the Android app sends (whose values are the plugin's
+    defaults), and the feeder and litter box endpoints and their fields.
+
+  The Home Assistant Petkit integration (homeassistant_petkit), by Jezza34000
+  and contributors
+    https://github.com/Jezza34000/homeassistant_petkit
+    Licence: MIT License.
+    Used by the Petkit plugin: how the day's records give the feed count, the
+    litter box's working state and a finished cleaning.
+
+  tinytuya, by Jason Cox and contributors
+    https://github.com/jasonacox/tinytuya
+    Licence: MIT License.
+  tuyapi, by Max Isom and contributors
+    https://github.com/codetheweb/tuyapi
+    Licence: MIT License.
+    Used by the Tuya plugin: the frame layout, encryption and commands of the
+    local protocol 3.3. The plugin's cloud lookup follows Tuya's own public
+    developer documentation for cloud projects.
+
+  pywizlight, by Stephan Traub and contributors
+    https://github.com/sbidy/pywizlight
+    Licence: MIT License.
+    Used by the WiZ plugin: the local UDP protocol on port 38899 (getPilot,
+    setPilot and their fields).
+
+  The LG webOS client libraries lgtv2 and PyWebOSTV
+    https://github.com/hobbyquaker/lgtv2 (Sebastian Raff and contributors)
+    https://github.com/supersaiyanmode/PyWebOSTV (Srivatsan Iyer and contributors)
+    Licence: MIT License, both.
+    Used by the webOS plugin: the SSAP pairing message and its permission list,
+    the ssap:// addresses for power, inputs and the foreground app, and the
+    pointer socket for remote keys. Wake-on-LAN follows AMD's "Magic Packet
+    Technology" white paper.
+
+  SoCo, by Rahim Sonawalla and contributors
+    https://github.com/SoCo/SoCo
+    Licence: MIT License.
+    Used by the Sonos plugin, beside the UPnP Forum's published UPnP AV
+    specifications: the Sonos extensions to them (night mode through GetEQ and
+    SetEQ, and the stream addresses of the TV and line inputs).
+
+  Signify's Hue developer documentation (developers.meethue.com)
+    The Hue plugin follows the documented Hue Bridge REST API, version 1:
+    pairing with the link button, lights, groups, and the brightness and colour
+    scales. Signify publishes this documentation for developers who build
+    products that work with Hue; no text from it is reproduced here.
+
+The other plugins use only documented interfaces: Moonraker's web API and
+Klipper's status reference (Klipper and Moonraker are GPL-3.0 software; no code
+from them is included), the Proxmox VE API (Proxmox VE is AGPL-3.0 software by
+Proxmox Server Solutions GmbH; no code from it is included), Plex's support
+documentation on the X-Plex-Token header, RFC 2326 (RTSP) for the camera probe,
+and Microsoft's Azure IoT Hub documentation for sending a device-to-cloud
+message over HTTPS. The Glimdock plugin speaks Glimdock's own HTTP contract.
+
+The VNC console in the web app is a small client written for this product from
+the RFB protocol (RFC 6143). Its DES routine, needed only for the VNC handshake,
+is written from the DES standard (FIPS 46-3) and its published tables. It is
+not adapted from noVNC or any other VNC client.
+
+
+Third-party software
+--------------------
+
+Release archives contain THIRD-PARTY-NOTICES.txt, with the licence of every
+Rust crate compiled into the binary. The optional speech service in
+services/swifty-speech keeps its own notices for the speech model it uses.

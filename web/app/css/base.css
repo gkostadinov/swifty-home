@@ -1,0 +1,55 @@
+/* ---------- base ---------- */
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:17px;line-height:1.35;-webkit-font-smoothing:antialiased;overflow-x:hidden;-webkit-tap-highlight-color:transparent}
+*,*::before,*::after{box-sizing:border-box}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer;text-align:left}
+button:disabled{cursor:default}
+input{font:inherit;color:inherit}
+h1,h2,h3,p{margin:0}
+:focus{outline:none}
+:focus-visible{outline:3px solid var(--tint-soft);outline-offset:3px}
+.num{font-variant-numeric:tabular-nums}
+.vh{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+svg.ic{width:24px;height:24px;flex:none;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.defs{position:absolute;width:0;height:0;overflow:hidden}
+
+/* ---------- the lit room ---------- */
+#scene{position:fixed;inset:0;z-index:0;overflow:hidden;background:var(--bg);pointer-events:none}
+#scene .bloom{position:absolute;width:88vmax;height:88vmax;border-radius:50%;background:radial-gradient(closest-side,hsl(var(--h) 82% var(--bloom-l)) 0%,hsl(var(--h) 82% var(--bloom-l) / .55) 32%,transparent 72%);opacity:calc(var(--a,0) * var(--bloom-a));transition:opacity 1.4s var(--ease),background 1.4s var(--ease);will-change:transform,opacity}
+#scene .bloom[data-b="1"]{left:-30vmax;top:-34vmax;animation:drift1 44s ease-in-out infinite alternate}
+#scene .bloom[data-b="2"]{right:-34vmax;top:-30vmax;animation:drift2 52s ease-in-out infinite alternate}
+#scene .bloom[data-b="3"]{left:-28vmax;bottom:-36vmax;animation:drift3 48s ease-in-out infinite alternate}
+#scene .bloom[data-b="4"]{right:-26vmax;bottom:-30vmax;animation:drift4 40s ease-in-out infinite alternate}
+#scene .horizon{position:absolute;left:-20vw;right:-20vw;bottom:-40vh;height:80vh;background:radial-gradient(ellipse at 50% 100%,var(--horizon) 0%,transparent 60%)}
+#scene canvas.rays{position:absolute;inset:0;width:100%;height:100%;opacity:var(--bar-a);transition:opacity 1.2s var(--ease)}
+#scene .veil{position:absolute;inset:0;background:linear-gradient(180deg,var(--bg) 0%,transparent 42%)}
+#scene .cool{position:absolute;inset:0;background:var(--cool-gray);mix-blend-mode:saturation;opacity:0;transition:opacity 1.2s var(--ease)}
+#scene.cool .cool{opacity:1}
+@keyframes drift1{to{transform:translate(9vmax,6vmax)}}
+@keyframes drift2{to{transform:translate(-8vmax,7vmax)}}
+@keyframes drift3{to{transform:translate(7vmax,-8vmax)}}
+@keyframes drift4{to{transform:translate(-9vmax,-6vmax)}}
+
+/* ---------- glass ---------- */
+.g{position:relative;background:var(--glass);-webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);box-shadow:var(--glass-shadow),var(--glass-inset);border-radius:var(--r,22px);isolation:isolate}
+.g::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;z-index:4;
+  background:linear-gradient(var(--hl,135deg),var(--hlc,var(--glass-edge)) 0%,var(--glass-edge-2) 34%,transparent 58%,var(--glass-edge-2) 100%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;
+  transition:background .6s var(--ease)}
+.g::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:3;
+  background:linear-gradient(var(--hl,135deg),var(--glass-sheen) 0%,transparent 28%,transparent 72%,var(--glass-sheen) 100%);opacity:.7;transition:background .6s var(--ease)}
+.g.strong{background:var(--glass-strong)}
+.g.lens{background:var(--lens);-webkit-backdrop-filter:blur(8px) saturate(170%);backdrop-filter:blur(8px) saturate(170%)}
+.press,.scenes,.cap,.capsule,.btn,.pill,.segc,.toggle,.hold,.remote{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+html.holding,html.holding *{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important}
+.capsule,.ptt,#chat-mic{touch-action:none}
+.press{transition:transform .45s var(--spring),box-shadow .45s var(--spring)}
+.press:active{transform:scale(.97)}
+.press.held{transform:scale(.97)}
+@media (prefers-reduced-transparency: reduce){
+  .g,.g.lens,.refract .g.lens{background:var(--glass-solid);-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+  #sheet{background:var(--sheet-solid)}
+  #scene .bloom{opacity:calc(var(--a,0) * .3)}
+  #scene canvas.rays{display:none}
+}
+

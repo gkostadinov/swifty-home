@@ -1,0 +1,214 @@
+# Swifty Home configuration, version 1 (the glimdock-home format).
+#
+# A test fixture: the hub no longer reads this format. Only `swifty migrate`
+# does, to turn it into version 2 (packaging/swifty.example.toml).
+#
+# Secrets never go in this file and never come from the environment. Each one
+# lives in its own file, and this file names the path. Unknown keys are refused,
+# so a secret pasted here stops the service from starting.
+
+# Dry-run is the default: adapters are not called and no socket is opened. Only
+# the exact line `live = true` allows commands to reach a device.
+live = false
+
+# Keep this on loopback, behind the TLS reverse proxy.
+listen = "127.0.0.1:8790"
+
+database = "/var/lib/glimdock-home/home.db"
+
+# The Proxmox VM this console runs on. Stopping or restarting it needs an extra
+# acknowledgement, and it cannot be taken off the machine list.
+# console_vm = 102
+
+[webauthn]
+rp_id = "home.example.org"
+origin = "https://home.example.org"
+rp_name = "Swifty Home"
+
+[session]
+# 8 hours is the maximum the service accepts.
+absolute_secs = 28800
+idle_secs = 1800
+
+[timing]
+poll_ms = 250
+sync_wait_ms = 4000
+duplicate_window_ms = 10000
+
+[audit]
+# Holds the key that signs the audit log's head: at least 32 characters, mode 600,
+# readable by this service and nothing else. Set it before the first sign-in. A
+# log that already has rows when a key is added can never verify against it.
+# key_file = "/etc/glimdock-home/audit.key"
+
+# https is required unless this is on loopback. In dry-run, voice only works if it
+# is on loopback, so that nothing leaves this machine.
+[speech]
+url = "http://127.0.0.1:8791"
+token_file = "/etc/glimdock-home/speech.token"
+connect_timeout_secs = 3
+timeout_secs = 20
+
+# ----- Devices
+#
+# Addresses below are from the 192.0.2.0/24 documentation range and reach
+# nothing: replace them. In live mode, a device with no section here is disabled
+# and says why. Every credential is a path to its own file, mode 600 on Linux.
+
+[devices]
+connect_timeout_ms = 1500
+read_timeout_ms = 2500
+
+# UDP 38899. No key.
+[devices.wiz.bulbs]
+bulb1 = "192.0.2.21"
+bulb2 = "192.0.2.22"
+bulb3 = "192.0.2.23"
+bulb4 = "192.0.2.24"
+
+# Lights on the bridge are added under Find new lights. Disabled until key_file
+# exists. The key is created with the bridge's link button.
+[devices.hue]
+url = "http://192.0.2.30"
+key_file = "/etc/glimdock-home/hue.key"
+
+# UPnP on port 1400. The sub is read-only. These must be IP addresses: a real Arc
+# answers HTTP 400 to a request addressed by name.
+[devices.sonos]
+arc_url = "http://192.0.2.31:1400"
+sub_url = "http://192.0.2.32:1400"
+
+# Plain ws:// only. Disabled until client_key_file exists, and this service never
+# starts pairing. Without wol_mac, turning the TV on is refused, because a TV that
+# is off has no websocket. The Movie scene needs it too.
+[devices.webos]
+url = "ws://192.0.2.33:3000"
+client_key_file = "/etc/glimdock-home/lgtv.key"
+# wol_mac = "AA:BB:CC:DD:EE:FF"
+# wol_broadcast = "192.0.2.255:9"
+
+[devices.moonraker]
+url = "http://192.0.2.34:7125"
+# Only if the server is not in Moonraker's trusted_clients.
+# api_key_file = "/etc/glimdock-home/moonraker.key"
+
+# Optional and read-only. The token goes in a header, never the URL.
+[devices.plex]
+url = "http://192.0.2.35:32400"
+token_file = "/etc/glimdock-home/plex.token"
+
+# A status probe only. Disabled until credentials_file exists.
+[devices.camera]
+host = "192.0.2.36"
+port = 554
+credentials_file = "/etc/glimdock-home/camera.login"
+
+# Must be https. The token file is written as user@realm!tokenid=secret. ca_file is
+# /etc/pve/pve-root-ca.pem copied from the host, unless the API has a publicly
+# trusted certificate. The token needs:
+#   VM.PowerMgmt and VM.Audit on /vms, to control VMs and to see new ones
+#   VM.Console, VM.PowerMgmt and VM.Audit on each VM that has a console here,
+#   because an ACL on a deeper path replaces what it would inherit
+#   Sys.PowerMgmt on /nodes/<node>, to reboot or shut down the node
+#   Sys.Audit on /nodes/<node>, for the node's uptime and history
+[devices.proxmox]
+url = "https://192.0.2.10:8006"
+# The node's name, as Proxmox shows it.
+node = "pve"
+token_file = "/etc/glimdock-home/proxmox.token"
+ca_file = "/etc/glimdock-home/pve-root-ca.pem"
+
+# Read-only, with a bearer token. Set snapshot_path to the collector's real
+# snapshot endpoint.
+[devices.collector]
+url = "http://192.0.2.10:8080"
+snapshot_path = "/REPLACE-WITH-THE-SNAPSHOT-PATH"
+token_file = "/etc/glimdock-home/collector.token"
+
+# Optional. Tuya smart sockets, protocol 3.3 on TCP 6668. Each key_file holds one
+# line: the socket's local key, base64-encoded. Without a name a socket is
+# "Socket 1", "Socket 2" and so on, in this order.
+# [[devices.tuya.plugs]]
+# id = "bf0123456789abcdef"
+# address = "192.0.2.40"
+# key_file = "/etc/glimdock-home/tuya-bf0123456789abcdef.key"
+# name = "Desk lamp"
+# usb_dp = 7                the data point of a USB port that switches on its own
+
+# Optional. The Petkit D4 feeder and T4 litter box, through Petkit's cloud, because they have no local API.
+# Use a second Petkit account that the devices are shared to: an account is signed in on one device at a
+# time, so your main one would sign the phone app out. credentials_file holds one line, account:md5 of
+# the password in hex, which is all Petkit's login sends. Feeding and cleaning are refused until commands
+# is true, so check the readings against the real devices first. The D4 takes 10, 20, 30, 40 or 50 g.
+# [devices.petkit]
+# region = "DE"                                  your country as the Petkit app has it, or "china"
+# credentials_file = "/etc/glimdock-home/petkit.login"
+# timezone = "Europe/Berlin"
+# utc_offset_minutes = 60                         east of UTC now. It does not follow daylight saving time
+# commands = false
+# poll_secs = 60                                  15 to 600. Petkit is asked no more often than this
+# feeder_id = 123456                              only if the account has more than one
+# litter_id = 234567
+
+# Optional. Toshiba air conditioners on Wi-Fi. They have no local API, so these go
+# through Toshiba's Home AC Control cloud. credentials_file holds one line: base64
+# of the JSON that signs in to the account. Without a name a unit is
+# "Air conditioner", or "Air conditioner 1", 2 and so on.
+# [devices.toshiba]
+# credentials_file = "/etc/glimdock-home/toshiba.login"
+#
+# [[devices.toshiba.units]]
+# id = "0a1b2c3d-1111-2222-3333-444455556666"
+# unique_id = "THE-DEVICE-UNIQUE-ID-THE-CLOUD-LISTS"
+# name = "Lounge"
+
+# Optional. Swifty, quick chats with a local model over its OpenAI-compatible API.
+# The next address is tried only when one cannot be reached. Plain http is allowed
+# only on a private network. In dry-run nothing is sent.
+# [assistant]
+# urls = ["http://127.0.0.1:8080/v1"]
+# model = "my-model"
+# key_file = "/etc/glimdock-home/assistant.key"
+#
+# Optional. An external agent with an HTTP API, for everything that is not about
+# the home. Both copies must be on loopback. The owner's has every tool and asks
+# for nothing. Everyone else's has web search only.
+# [assistant.agent]
+# owner_url = "http://127.0.0.1:8801"
+# guest_url = "http://127.0.0.1:8802"
+# connection = "my-connection"
+# model = "my-model"
+#
+# [assistant.weather]
+# place = "Example City"
+# latitude = 51.48
+# longitude = 0.0
+
+# ----- Rooms, machines, console, agents and health
+
+# Which VMs may have a console session. Windows is refused: its VNC display shows
+# only the emulated VGA, not the passed-through GPU's desktop. A VM must also be on
+# the approved machine list.
+[console]
+# targets = ["vm101", "vm102", "vm103"]
+
+# A further Proxmox host must have an IP address inside one of these networks, and
+# its token and CA files must be bare file names inside secrets_dir. Adding a host
+# is refused until secrets_dir is set.
+[machines]
+allowed_host_networks = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fc00::/7"]
+# secrets_dir = "/etc/glimdock-home"
+
+# Where to broadcast the WiZ discovery datagram. Discovery is refused until set. A
+# reply only counts from this port and from the network this address is the top of.
+[lights]
+# wiz_broadcast = "192.0.2.255:38899"
+
+# The collector's own agent pairing endpoint. It could not be checked when this was
+# written: replace it with the real path.
+[agents]
+# pairing_path = "/REPLACE-WITH-THE-PAIRING-PATH"
+
+# A file holding the last CPU canary result. Without it, the reading is not_reporting.
+[health]
+# cpu_canary_file = "/var/lib/glimdock/cpu-canary.json"

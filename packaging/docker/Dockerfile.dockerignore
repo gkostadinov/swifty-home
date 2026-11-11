@@ -1,0 +1,15 @@
+# What the image build does not need. BuildKit reads this file because it sits next to
+# packaging/docker/Dockerfile; the build context is the repository root.
+.git
+.github
+**/target
+services
+*.db
+*.db-wal
+*.db-shm
+*.key
+*.pem
+*.token
+/swifty.toml
+/config.toml
+/secrets

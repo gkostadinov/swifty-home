@@ -1,0 +1,27 @@
+[package]
+name = "swifty-plugin-moonraker"
+description = "Swifty Home plugin for Klipper 3D printers through Moonraker's HTTP API: start the loaded job, pause, resume, emergency stop and status"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+name = "swifty_plugin_moonraker"
+path = "src/lib.rs"
+
+[dependencies]
+async-trait.workspace = true
+# The header type the HTTP client takes. It is the same type swifty-net uses;
+# naming it here opens no socket.
+http = "1"
+serde.workspace = true
+serde_json.workspace = true
+swifty-net.workspace = true
+swifty-plugin-api.workspace = true
+url.workspace = true
+
+[dev-dependencies]
+swifty-plugin-testkit.workspace = true
+tokio.workspace = true

@@ -1,0 +1,31 @@
+[package]
+name = "swifty-plugin-toshiba"
+description = "Swifty Home plugin for Toshiba air conditioners on Wi-Fi, through Toshiba's cloud (unofficial)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+name = "swifty_plugin_toshiba"
+path = "src/lib.rs"
+
+[dependencies]
+async-trait.workspace = true
+base64.workspace = true
+# Only for the header and status types that `swifty-net`'s HTTP client takes and
+# gives back. It is the same `http` the client is built on, already in the lock file.
+http = "1"
+serde.workspace = true
+serde_json.workspace = true
+swifty-net.workspace = true
+swifty-plugin-api.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+url.workspace = true
+
+[dev-dependencies]
+futures-util.workspace = true
+swifty-plugin-testkit.workspace = true
+tokio.workspace = true

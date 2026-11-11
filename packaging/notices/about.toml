@@ -1,0 +1,26 @@
+# cargo-about: the third-party notices shipped in each release archive as
+# THIRD-PARTY-NOTICES.txt. `cargo xtask dist` runs it; the release workflow installs it.
+#
+#   cargo about generate --locked -c packaging/notices/about.toml \
+#       -m crates/swifty/Cargo.toml packaging/notices/about.hbs
+#
+# The accepted licences are the ones deny.toml allows. A licence cargo-deny accepts but
+# this file does not fails the release build, so add it to both.
+
+accepted = [
+    "Apache-2.0",
+    "BSD-3-Clause",
+    "CDLA-Permissive-2.0",
+    "ISC",
+    "MIT",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Zlib",
+]
+# The release builds: static musl binaries for both architectures.
+targets = ["x86_64-unknown-linux-musl", "aarch64-unknown-linux-musl"]
+# Only what is linked into the shipped binary.
+ignore-build-dependencies = true
+ignore-dev-dependencies = true
+# Crates whose licence files need cargo-about's built-in help to be found.
+workarounds = ["ring", "rustls"]

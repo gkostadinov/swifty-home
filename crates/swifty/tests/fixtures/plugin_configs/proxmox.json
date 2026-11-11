@@ -1,0 +1,24 @@
+{
+  "plugin": "proxmox",
+  "source": "plugins/proxmox/src/config.rs",
+  "config_version": 1,
+  "root": "ProxmoxConfig",
+  "structs": {
+    "ProxmoxConfig": {
+      "url": { "type": "string", "format": "url", "schemes": ["http", "https"], "https_unless_loopback": true },
+      "node": { "type": "string", "format": "node" },
+      "public_ca": { "type": "bool", "optional": true },
+      "console_targets": { "type": "rows", "of": "ConsoleTarget", "optional": true },
+      "host_files_dir": { "type": "string", "optional": true, "nullable": true, "format": "absolute_path" }
+    },
+    "ConsoleTarget": {
+      "vm": { "type": "string", "format": "vm" }
+    }
+  },
+  "secrets": [{ "slot": "token", "required": true }, { "slot": "ca", "required": false }],
+  "example": {
+    "url": "https://192.0.2.10:8006",
+    "node": "pve",
+    "console_targets": [{ "vm": "vm101" }, { "vm": "two-vm200" }]
+  }
+}

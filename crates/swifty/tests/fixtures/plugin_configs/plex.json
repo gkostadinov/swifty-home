@@ -1,0 +1,13 @@
+{
+  "plugin": "plex",
+  "source": "plugins/plex/src/config.rs",
+  "config_version": 1,
+  "root": "PlexConfig",
+  "structs": {
+    "PlexConfig": {
+      "url": { "type": "string", "format": "url", "schemes": ["http", "https"] }
+    }
+  },
+  "secrets": [{ "slot": "token", "required": true }],
+  "example": { "url": "http://192.0.2.20:32400" }
+}

@@ -1,0 +1,53 @@
+# Swifty Home, the hub. Installed by packaging/install.sh to /etc/systemd/system.
+# To change a setting, use a drop-in (sudo systemctl edit swifty-home) rather than this
+# file, which the next install replaces.
+[Unit]
+Description=Swifty Home hub
+Wants=network-online.target
+After=network-online.target nss-lookup.target
+
+[Service]
+Type=exec
+User=swifty-home
+Group=swifty-home
+ExecStart=/usr/local/bin/swifty serve --config /etc/swifty-home/swifty.toml
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=20s
+UMask=0077
+
+# The database and the secret store. The service writes nothing anywhere else.
+StateDirectory=swifty-home
+StateDirectoryMode=0700
+# swifty.toml and the audit key: root:swifty-home, read-only to the service.
+ConfigurationDirectory=swifty-home
+ConfigurationDirectoryMode=0750
+
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RemoveIPC=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged
+SystemCallErrorNumber=EPERM
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+
+[Install]
+WantedBy=multi-user.target

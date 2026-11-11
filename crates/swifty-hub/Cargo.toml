@@ -1,0 +1,43 @@
+[package]
+name = "swifty-hub"
+description = "The Swifty Home hub as a library: devices, actions, tiers and policy, passkeys, the audit log and the HTTP API"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+name = "swifty_hub"
+path = "src/lib.rs"
+
+[dependencies]
+axum.workspace = true
+base64.workspace = true
+futures-util.workspace = true
+getrandom.workspace = true
+hex.workspace = true
+hmac.workspace = true
+jiff.workspace = true
+reqwest.workspace = true
+# Online backup: `swifty migrate` and `swifty backup` copy the database while it may be read.
+rusqlite = { workspace = true, features = ["backup"] }
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+subtle.workspace = true
+swifty-net.workspace = true
+swifty-plugin-api = { workspace = true, features = ["openapi"] }
+thiserror.workspace = true
+tokio.workspace = true
+toml.workspace = true
+tracing.workspace = true
+utoipa.workspace = true
+utoipa-axum.workspace = true
+webauthn-rs.workspace = true
+
+[dev-dependencies]
+async-trait.workspace = true
+# The registry's own tests drive the mock plugin.
+swifty-plugin-mock.workspace = true
+tempfile.workspace = true

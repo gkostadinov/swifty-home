@@ -1,0 +1,11 @@
+[package]
+name = "xtask"
+description = "Build tooling for Swifty Home, run as `cargo xtask <command>`. Never shipped"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+# The standard library only, so `cargo xtask` builds fast and needs nothing new.
+[dependencies]

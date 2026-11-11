@@ -1,0 +1,15 @@
+{
+  "plugin": "glimdock",
+  "source": "plugins/glimdock/src/config.rs",
+  "config_version": 1,
+  "root": "GlimdockConfig",
+  "structs": {
+    "GlimdockConfig": {
+      "url": { "type": "string", "format": "url", "schemes": ["http", "https"] },
+      "snapshot_path": { "type": "string", "format": "plain_path", "max_len": 256 },
+      "pairing_path": { "type": "string", "optional": true, "nullable": true, "format": "plain_path", "max_len": 256 }
+    }
+  },
+  "secrets": [{ "slot": "token", "required": true }],
+  "example": { "url": "http://c", "snapshot_path": "/s", "pairing_path": "/pair" }
+}

@@ -1,0 +1,7 @@
+# The sherpa-onnx "static-MT" libraries are built against the static C runtime,
+# so the Rust code has to use it as well. The result needs no vcruntime DLL.
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
+
+[target.aarch64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]

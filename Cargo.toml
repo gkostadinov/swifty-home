@@ -1,0 +1,95 @@
+# Swifty Home: the hub library, the `swifty` binary, and (as they arrive) the
+# plugin contract, the plugins and the build tooling. The Windows speech service
+# in services/swifty-speech has its own lock file and toolchain and is built on
+# its own.
+
+[workspace]
+resolver = "2"
+members = ["crates/*", "plugins/*", "xtask"]
+exclude = ["services/swifty-speech"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.98"
+license = "Apache-2.0"
+publish = false
+
+[workspace.dependencies]
+swifty-hub = { path = "crates/swifty-hub", version = "0.1.0" }
+swifty-net = { path = "crates/swifty-net", version = "0.1.0" }
+swifty-plugin-api = { path = "crates/swifty-plugin-api", version = "0.1.0" }
+swifty-plugin-testkit = { path = "crates/swifty-plugin-testkit", version = "0.1.0" }
+# The first-party plugins. `crates/swifty/src/plugins.rs` lists them, each behind a feature.
+swifty-plugin-camera = { path = "plugins/camera", version = "0.1.0" }
+swifty-plugin-glimdock = { path = "plugins/glimdock", version = "0.1.0" }
+swifty-plugin-hue = { path = "plugins/hue", version = "0.1.0" }
+swifty-plugin-mock = { path = "plugins/mock", version = "0.1.0" }
+swifty-plugin-moonraker = { path = "plugins/moonraker", version = "0.1.0" }
+swifty-plugin-petkit = { path = "plugins/petkit", version = "0.1.0" }
+swifty-plugin-plex = { path = "plugins/plex", version = "0.1.0" }
+swifty-plugin-proxmox = { path = "plugins/proxmox", version = "0.1.0" }
+swifty-plugin-sonos = { path = "plugins/sonos", version = "0.1.0" }
+swifty-plugin-toshiba = { path = "plugins/toshiba", version = "0.1.0" }
+swifty-plugin-tuya = { path = "plugins/tuya", version = "0.1.0" }
+swifty-plugin-webos = { path = "plugins/webos", version = "0.1.0" }
+swifty-plugin-wiz = { path = "plugins/wiz", version = "0.1.0" }
+
+# AES-128 for the local protocol of Tuya smart sockets.
+aes = "0.9"
+async-trait = "0.1"
+axum = { version = "0.8", features = ["ws"] }
+base64 = "0.22"
+clap = { version = "4", features = ["derive"] }
+# The checksum on each Tuya frame.
+crc32fast = "1"
+futures-util = { version = "0.3", default-features = false, features = ["sink"] }
+getrandom = "0.3"
+hex = "0.4"
+# Signs the audit head with a key the database does not hold.
+# Local time and daylight saving time for the electricity tariff's night hours.
+jiff = "0.2"
+hmac = "0.12"
+# TLS is rustls so one binary builds the same way on Windows and Linux.
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+rusqlite = { version = "0.41", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+subtle = "2"
+thiserror = "2"
+tokio = { version = "1", features = ["io-util", "macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
+# The websockets the hub opens: plain ws:// for the LG TV, and the Proxmox VNC
+# relay, whose TLS is added by hand in crates/swifty-net with the same CA file
+# the HTTP client uses. The TCP connections are opened there too.
+tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "tls12"] }
+tokio-tungstenite = { version = "0.30", default-features = false, features = ["handshake"] }
+toml = "0.9"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+# The OpenAPI document of API v1, made from the router itself:
+# `utoipa-axum` registers each route and its entry in one call.
+utoipa = { version = "6", default-features = false, features = ["macros"] }
+utoipa-axum = "0.3"
+# The public roots, for a Proxmox host with a publicly trusted certificate.
+webpki-roots = "1"
+# Pinned exactly: step-up rewrites the challenge inside the serialised ceremony
+# state (see crates/swifty-hub/src/passkeys.rs), which depends on this version's
+# state layout.
+webauthn-rs = { version = "=0.6.2", features = ["danger-allow-state-serialisation"] }
+
+# Tests only.
+http-body-util = "0.1"
+# A private CA and an HTTPS stand-in for Proxmox, on loopback.
+rcgen = "=0.13.2"
+tempfile = "3"
+tower = { version = "0.5", features = ["util"] }
+url = "2"
+webauthn-authenticator-rs = { version = "=0.6.2", features = ["softpasskey"] }
+webauthn-rs-proto = "=0.6.2"
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
+opt-level = 3
+strip = "symbols"

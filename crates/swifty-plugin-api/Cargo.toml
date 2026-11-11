@@ -1,0 +1,32 @@
+[package]
+name = "swifty-plugin-api"
+description = "The contract between the Swifty Home hub and its plugins: devices, capabilities, operations, state, confirmation rules, manifests, drivers and setup flows"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+name = "swifty_plugin_api"
+path = "src/lib.rs"
+
+# Nothing else. A plugin depends on this crate, so everything it pulls in is
+# pulled into every plugin.
+[dependencies]
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+swifty-net.workspace = true
+thiserror.workspace = true
+# Only with the `openapi` feature, which the hub turns on to describe its API. A
+# plugin never needs it.
+utoipa = { workspace = true, optional = true }
+
+[features]
+# `utoipa::ToSchema` for the types API v1 sends and takes: `Op`, `State`,
+# `Capability`, `SetupStep`, `Health`, `Readiness` and what they hold.
+openapi = ["dep:utoipa"]
+
+[dev-dependencies]
+tokio.workspace = true

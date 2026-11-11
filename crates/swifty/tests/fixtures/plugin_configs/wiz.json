@@ -1,0 +1,24 @@
+{
+  "plugin": "wiz",
+  "source": "plugins/wiz/src/config.rs",
+  "config_version": 1,
+  "root": "WizConfig",
+  "structs": {
+    "WizConfig": {
+      "bulbs": { "type": "rows", "of": "BulbRow", "optional": true },
+      "port": { "type": "u16", "optional": true, "min": 1 },
+      "broadcast": { "type": "string", "optional": true, "nullable": true, "format": "ipv4_socket" }
+    },
+    "BulbRow": {
+      "id": { "type": "string", "format": "local_id" },
+      "address": { "type": "string", "format": "ip_or_socket" }
+    }
+  },
+  "unique": [["bulbs", "id"]],
+  "secrets": [],
+  "example": {
+    "bulbs": [{ "id": "bulb1", "address": "192.0.2.1" }, { "id": "bulb2", "address": "192.0.2.2:40000" }],
+    "port": 38899,
+    "broadcast": "192.0.2.255:38899"
+  }
+}

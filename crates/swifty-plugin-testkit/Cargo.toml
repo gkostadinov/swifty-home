@@ -1,0 +1,36 @@
+[package]
+name = "swifty-plugin-testkit"
+description = "Test kit for Swifty Home plugins: loopback mock devices, trap listeners and the conformance suite"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+name = "swifty_plugin_testkit"
+path = "src/lib.rs"
+
+# Of the workspace's own crates, only the contract and the socket crate. Never
+# the hub: a plugin's tests use this crate without building the hub.
+[dependencies]
+aes.workspace = true
+axum.workspace = true
+base64.workspace = true
+crc32fast.workspace = true
+futures-util.workspace = true
+hex.workspace = true
+rcgen.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+swifty-net.workspace = true
+swifty-plugin-api.workspace = true
+tokio.workspace = true
+tokio-rustls.workspace = true
+tokio-tungstenite.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+[dev-dependencies]
+async-trait.workspace = true

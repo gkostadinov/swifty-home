@@ -1,0 +1,31 @@
+[package]
+name = "swifty-plugin-petkit"
+description = "Swifty Home plugin for the Petkit D4 feeder and T4 litter box, through Petkit's cloud (unofficial)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+name = "swifty_plugin_petkit"
+path = "src/lib.rs"
+
+[dependencies]
+async-trait.workspace = true
+# Only for the header types that `swifty-net`'s HTTP client takes. It is the same
+# `http` the client is built on, already in the lock file.
+http = "1"
+# Petkit's login sends the MD5 of the account's sign-in secret, so the setup has to
+# make one. Already in the lock file.
+md5 = "0.8"
+serde.workspace = true
+serde_json.workspace = true
+swifty-net.workspace = true
+swifty-plugin-api.workspace = true
+tokio.workspace = true
+url.workspace = true
+
+[dev-dependencies]
+swifty-plugin-testkit.workspace = true
+tokio.workspace = true

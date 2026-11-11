@@ -1,0 +1,14 @@
+{
+  "plugin": "camera",
+  "source": "plugins/camera/src/config.rs",
+  "config_version": 1,
+  "root": "CameraConfig",
+  "structs": {
+    "CameraConfig": {
+      "host": { "type": "string", "format": "host" },
+      "port": { "type": "u16", "optional": true }
+    }
+  },
+  "secrets": [{ "slot": "login", "required": true }],
+  "example": { "host": "192.0.2.30", "port": 8554 }
+}

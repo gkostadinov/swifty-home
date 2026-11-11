@@ -1,0 +1,95 @@
+# Swifty Home configuration, version 2.
+#
+# This file holds what the hub needs before it can open its database, and the
+# operator's policy. Devices, rooms, scenes and people are arranged in the app and
+# kept in the database. Plugin credentials are kept in the secret store under the
+# data directory, one file per value, and never here.
+#
+# Unknown keys are refused, so a secret pasted here stops the service from
+# starting. Nothing is read from the environment.
+config_version = 2
+
+# Dry-run is the default: no plugin is connected and no socket is opened.
+# Only the exact line `live = true` lets a command reach a device.
+live = false
+
+# Keep this on loopback, behind a TLS reverse proxy.
+listen = "127.0.0.1:8790"
+
+# Everything the hub writes lives under here.
+data_dir = "/var/lib/swifty-home"
+# database = "/var/lib/swifty-home/home.db"        # default: <data_dir>/home.db
+# secrets_dir = "/var/lib/swifty-home/secrets"     # default: <data_dir>/secrets
+
+# The device this hub itself runs on, if it is one of its own devices. Stopping
+# it needs an extra acknowledgement, and it cannot be removed.
+# runs_on = "vm102"
+
+# Required. There is no default: passkeys are bound to these for good.
+[webauthn]
+origin  = "https://home.example.org"
+rp_id   = "home.example.org"
+rp_name = "Swifty Home"
+
+[session]
+# 8 hours is the most the hub accepts.
+absolute_secs = 28800
+idle_secs     = 1800
+
+[timing]
+poll_ms             = 250
+sync_wait_ms        = 4000
+duplicate_window_ms = 10000
+
+[network]
+connect_timeout_ms = 1500
+read_timeout_ms    = 2500
+# A further Proxmox host must have an address inside one of these.
+allowed_host_networks = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fc00::/7"]
+
+[audit]
+# Holds the key that signs the audit log's head: at least 32 characters, mode
+# 600, readable by the hub and nothing else. `swifty init` creates it. A log that
+# already has rows when a key is added can never verify against it.
+key_file = "/etc/swifty-home/audit.key"
+
+# ----- Optional
+
+# Local speech to text. https is required unless it is on loopback. In dry-run,
+# voice only works on loopback, so that nothing leaves this machine.
+# `swifty speech set-token` writes the token file from standard input.
+# [speech]
+# url = "http://127.0.0.1:8791"
+# token_file = "/etc/swifty-home/speech.token"
+# connect_timeout_secs = 3
+# timeout_secs = 20
+
+# Swifty, quick chats with a local model over its OpenAI-compatible API. The next
+# address is tried only when one cannot be reached. Plain http is allowed only on
+# a private network. In dry-run nothing is sent. `swifty assistant set-key`
+# writes the key file from standard input.
+# [assistant]
+# urls = ["http://127.0.0.1:8080/v1"]
+# model = "my-model"
+# key_file = "/etc/swifty-home/assistant.key"
+#
+# An external agent with an HTTP API on loopback, for everything that is not about
+# the home. The owner's copy has every tool; everyone else's has web search only.
+# [assistant.agent]
+# owner_url = "http://127.0.0.1:8801"
+# guest_url = "http://127.0.0.1:8802"
+# connection = "my-connection"
+# model = "my-model"
+# session_prefix = "swifty"           # the agent's session is <prefix>-<user>-<chat>
+# client_header = "x-swifty-client"   # the header that names this hub to the agent
+# client_name = "Swifty Home"         # what this hub calls itself in that header
+#
+# [assistant.weather]
+# place = "Example City"
+# latitude = 51.48
+# longitude = 0.0
+
+# A file holding the last CPU canary result. Without it, the reading is
+# not_reporting.
+# [health]
+# cpu_canary_file = "/var/lib/swifty-home/cpu-canary.json"

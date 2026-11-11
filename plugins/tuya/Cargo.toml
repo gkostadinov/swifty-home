@@ -1,0 +1,33 @@
+[package]
+name = "swifty-plugin-tuya"
+description = "Swifty Home plugin for Tuya smart sockets on their local protocol 3.3, with an optional key lookup in Tuya's cloud during setup"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+name = "swifty_plugin_tuya"
+path = "src/lib.rs"
+
+[dependencies]
+# AES-128-ECB, the cipher of the local protocol.
+aes.workspace = true
+async-trait.workspace = true
+base64.workspace = true
+# The checksum on each frame.
+crc32fast.workspace = true
+hex.workspace = true
+# HMAC-SHA256, how Tuya's OpenAPI signs a request. Setup only.
+hmac.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+swifty-net.workspace = true
+swifty-plugin-api.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+swifty-plugin-testkit.workspace = true
+tokio.workspace = true

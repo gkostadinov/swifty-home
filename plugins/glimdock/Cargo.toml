@@ -1,0 +1,27 @@
+[package]
+name = "swifty-plugin-glimdock"
+description = "Swifty Home plugin for Glimdock nodes: the telemetry snapshot behind the charts and the health page, and pairing of the node's own agents"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+name = "swifty_plugin_glimdock"
+path = "src/lib.rs"
+
+[dependencies]
+async-trait.workspace = true
+# The header type the HTTP client takes, so the token can be marked sensitive.
+# The same crate and major version the client already uses.
+http = "1"
+serde.workspace = true
+serde_json.workspace = true
+swifty-net.workspace = true
+swifty-plugin-api.workspace = true
+url.workspace = true
+
+[dev-dependencies]
+swifty-plugin-testkit.workspace = true
+tokio.workspace = true

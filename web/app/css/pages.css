@@ -1,0 +1,320 @@
+/* ---------- lock ---------- */
+#lock{position:fixed;inset:0;z-index:50;display:grid;place-items:center;-webkit-backdrop-filter:blur(40px) saturate(120%);backdrop-filter:blur(40px) saturate(120%);background:var(--dim);transition:opacity .5s var(--ease),-webkit-backdrop-filter .5s,backdrop-filter .5s}
+#lock.clear{opacity:0;-webkit-backdrop-filter:blur(0);backdrop-filter:blur(0);pointer-events:none}
+#lock > div{display:flex;flex-direction:column;align-items:center;padding:24px}
+.roomlist .rowi{width:100%}
+#lock .unlock{width:140px;height:140px;--r:50%;display:grid;place-items:center;color:var(--text);position:relative}
+#lock .unlock svg.mk{width:56px;height:56px;color:var(--tint);fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+#lock .unlock .mk circle{fill:currentColor;stroke:none}
+/* the mark is the home itself. While a passkey is checked it calls out, and the things around it answer in turn */
+#lock .unlock.sweep .mk .sig{animation:sig 1.5s ease-in-out infinite}
+#lock .unlock.sweep .mk .far{animation-delay:.25s}
+@keyframes sig{0%,100%{opacity:.25}40%{opacity:1}}
+#lock .unlock .near{position:absolute;inset:0;pointer-events:none}
+#lock .unlock .near svg{position:absolute;left:50%;top:50%;width:18px;height:18px;margin:-9px;color:var(--text-2);opacity:0;transform:translate(var(--x),var(--y)) scale(.6);transition:opacity .35s,transform .45s var(--spring)}
+#lock .unlock.sweep .near svg{opacity:.45;transform:translate(var(--x),var(--y));transition-delay:calc(var(--i)*.07s);animation:near 1.6s ease-in-out calc(var(--i)*.4s) infinite}
+@keyframes near{0%,55%,100%{opacity:.45;color:var(--text-2)}22%{opacity:1;color:var(--tint)}}
+/* where WebGL draws it, the same house stands in 3D on a stage wider than the button, and the flat one steps aside. A good passkey sends rings of light across the whole display */
+#lock .unlock .stage{position:absolute;inset:0;border-radius:50%;overflow:hidden;pointer-events:none}
+#lock .unlock .stage canvas{position:absolute;left:-7.5%;top:-7.5%;display:block;width:115%;height:115%}
+#lock .unlock.gl .mk,#lock .unlock.gl .near{visibility:hidden}
+.wave{position:fixed;z-index:60;border-radius:50%;pointer-events:none;background:radial-gradient(closest-side,transparent 72%,var(--tint-soft) 90%,#fff 94%,transparent 100%)}
+#lock .unlock .needle{position:absolute;inset:8px;border-radius:50%;border:3px solid transparent;border-top-color:var(--tint);opacity:0}
+#lock .unlock.sweep .needle{opacity:1;animation:sweep .7s cubic-bezier(.4,0,.2,1) 1 forwards}
+#lock .lk{margin-top:18px;text-align:center;font-size:20px;font-weight:600}
+#lock .lk small{display:block;font-size:15px;font-weight:400;color:var(--text-2);margin-top:4px}
+#lock .devs{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:22px}
+
+/* ---------- wall ---------- */
+#wall{position:fixed;inset:0;z-index:30;padding:max(20px,env(safe-area-inset-top,0px)) max(28px,env(safe-area-inset-right,0px)) max(20px,env(safe-area-inset-bottom,0px)) max(28px,env(safe-area-inset-left,0px));display:grid;grid-template-columns:1.4fr 1fr;grid-template-rows:auto 1fr auto;gap:24px;font-size:24px;color:var(--text)}
+#wall .wt{grid-column:1/-1;display:flex;align-items:baseline;justify-content:space-between;gap:24px;padding-right:216px}
+#wall .wt h1{font-size:40px;font-weight:600;letter-spacing:-.01em}
+#wall .wt .clock{font-size:40px;font-weight:600}
+#wall .wl{display:flex;flex-direction:column;gap:20px;min-width:0}
+#wall .wr{display:flex;flex-direction:column;gap:20px;min-width:0}
+#wall .scenes{height:84px;--r:42px;max-width:none}
+#wall .roompick .pill{min-height:64px;padding:0 28px;font-size:24px}
+#wall .scenes .seg{height:72px;font-size:24px}
+#wall .tile{min-height:160px;flex:1}
+#wall .tile .name,#wall .tile .state,#wall .cap .lbl,#wall .cap .st{font-size:24px}
+#wall .tile .big{font-size:72px}
+#wall .cap{min-height:84px;--r:42px}
+#wall .ptt{flex:1;--r:40px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--text);min-height:200px;font-size:24px;font-weight:500}
+#wall .ptt .micwrap{width:112px;height:112px;border-radius:50%;display:grid;place-items:center;background:var(--tint);color:var(--on-tint);transition:transform .45s var(--spring)}
+#wall .ptt .micwrap svg{width:48px;height:48px}
+#wall .ptt.live .micwrap{transform:scale(1.1)}
+#wall .wf{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;font-size:20px;color:var(--text-2)}
+#wall .exit{position:fixed;top:max(12px,env(safe-area-inset-top,0px));right:max(12px,env(safe-area-inset-right,0px));font-size:20px;font-weight:500;color:var(--text);min-height:64px;min-width:64px;padding:0 24px;border-radius:32px;z-index:2;display:flex;align-items:center}
+#wall .ambient{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:24px;text-align:center;padding:40px;transition:transform 60s linear}
+#wall.idle .ambient{display:flex}
+#wall.idle > :not(.ambient):not(.exit):not(.attn){display:none}
+#wall .ambient .bigclock{font-size:168px;line-height:1;font-weight:600;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+#wall .ambient .sentence{font-size:44px;font-weight:500;max-width:900px;line-height:1.2}
+/* at night the room dims, not the words: the background and glass lose light, text keeps its contrast */
+html.night #scene .bloom{opacity:calc(var(--a,0) * .22)}
+html.night #scene canvas.rays{opacity:.12}
+html.night #wall .g::after{opacity:.3}
+#wall .attn{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:32px;text-align:center;padding:60px;background:var(--text);color:var(--bg);z-index:3}
+#wall.attention .attn{display:flex}
+#wall .attn .ic{width:160px;height:160px;stroke-width:1.5}
+#wall .attn h2{font-size:96px;line-height:1.05;font-weight:600;letter-spacing:-.02em;max-width:1000px}
+#wall .attn p{font-size:32px;opacity:.8}
+/* controls inside sheets grow for fingers at arm's length */
+html.wall #sheet .btn,html.wall #sheet .pill,html.wall #sheet .segc button{min-height:64px;height:auto;font-size:20px}
+html.wall #sheet .shead .close,html.wall #sheet .shead .back{width:64px;height:64px}
+html.wall #sheet .toggle{width:96px;height:64px}
+html.wall #sheet .toggle::before{top:9px;bottom:9px}
+html.wall #sheet .toggle::after{width:40px;height:40px;top:12px;left:10px}
+html.wall #sheet .toggle[aria-checked="true"]::after{transform:translateX(36px)}
+html.wall #sheet .slider{height:88px}
+html.wall #sheet .swatches button{width:64px;height:64px}
+html.wall #sheet .rowi{min-height:64px}
+html.wall #sheet details.disc{display:none}
+html.wall #sheet .hold{height:72px;font-size:20px}
+html.wall #sheet .dpad{grid-template-columns:repeat(3,112px);grid-template-rows:repeat(3,88px)}
+html.wall #sheet .rkeys{grid-auto-rows:72px;max-width:560px}
+html.wall #sheet .dpad button,html.wall #sheet .rkeys button{font-size:20px}
+
+/* ---------- rooms, charts, console, health ---------- */
+.row.comps{grid-template-columns:repeat(5,1fr)}
+.roomgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.roomgrid .tile.h220{min-height:150px}
+.tile .name .fine{display:block;font-size:15px;font-weight:400;color:var(--text-2)}
+.fine{font-size:15px;color:var(--text-3)}
+.rangec{max-width:360px}
+.chartwrap{position:relative}
+.chartwrap canvas.chart{height:136px;touch-action:pan-y;cursor:crosshair}
+.chartwrap .tip{position:absolute;top:4px;left:0;transform:translateX(-50%);background:var(--glass-solid);color:var(--text);font-size:15px;font-weight:500;padding:6px 10px;border-radius:10px;box-shadow:var(--tip-shadow);pointer-events:none;white-space:nowrap;font-variant-numeric:tabular-nums}
+.bar{height:14px;border-radius:7px;background:var(--field);overflow:hidden;position:relative;margin:6px 0 2px}
+.bar i{position:absolute;inset:0;width:calc(var(--p,0) * 1%);background:var(--tint);border-radius:7px;transition:width .6s var(--spring)}
+.bar.warn i{background:var(--amber)}
+.stack{display:flex;height:18px;border-radius:9px;overflow:hidden;background:var(--field);margin:6px 0 10px}
+.stack i{height:100%;display:block;flex:none}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:15px;color:var(--text-2)}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block;margin-right:6px;vertical-align:-1px}
+.counts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stat{display:flex;flex-direction:column;gap:2px;min-width:0;padding:12px 14px;border-radius:14px;background:var(--field)}
+.stat small{font-size:13px;color:var(--text-2)}
+.stat b{font-size:22px;line-height:28px;font-weight:600;white-space:nowrap}
+.swatch{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:8px;background:var(--c)}
+.chartbar{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px}
+@media (max-width:460px){.stats{grid-template-columns:repeat(2,1fr)}}
+.chat{display:flex;flex-direction:column;gap:10px;min-height:300px}
+.msg{max-width:88%;padding:10px 14px;border-radius:18px;font-size:17px;line-height:23px;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg.me{align-self:flex-end;background:var(--tint);color:var(--on-tint)}
+.msg.ai{align-self:flex-start;background:var(--field);color:var(--text)}
+.msg.fail{color:var(--red)}
+.msg .pill{margin:8px 6px 0 0}
+.msg .memline{display:flex;gap:6px;align-items:center;margin-top:8px;font-size:14px;line-height:19px;color:var(--text-2);overflow-wrap:anywhere}
+.msg .memline .pill{margin:0 0 0 auto;flex:none}
+.msg a{color:inherit;text-decoration:underline}
+.msg code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:15px}
+.msg .tools{display:flex;flex-direction:column;gap:4px;font-size:14px;line-height:19px;color:var(--text-2)}
+.msg .tools:not([hidden])+.body{margin-top:8px}
+.msg .tools:not([hidden])~.wait:not([hidden]){display:block;margin-top:10px}
+.msg .body.typing::after{content:'';display:inline-block;width:2px;height:1em;margin-left:2px;vertical-align:-2px;background:currentColor;animation:caret 1s steps(2) infinite}
+@keyframes caret{50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.msg .body.typing::after{animation:none}}
+#chat-mic.live{background:var(--tint);color:var(--on-tint)}
+.listen .btn{margin-top:14px}
+.msg .tools>div{display:flex;gap:6px;align-items:center;overflow-wrap:anywhere}
+.chatbar{display:flex;gap:8px;align-items:flex-end;position:sticky;bottom:calc(-28px - env(safe-area-inset-bottom,0px));z-index:1;margin:0 -24px calc(-28px - env(safe-area-inset-bottom,0px));padding:8px 24px calc(28px + env(safe-area-inset-bottom,0px));background:var(--sheet-solid)}
+.chatbar::before{content:'';position:absolute;left:0;right:0;top:-18px;height:18px;background:linear-gradient(to top,var(--sheet-solid),transparent);pointer-events:none}
+.chatbar .field{flex:1;width:auto;min-width:0;height:48px}
+.chatbar textarea.field{display:block;max-height:140px;padding:13px 20px;line-height:22px;border-radius:24px;resize:none;overflow-y:auto;font-family:inherit}
+.chatbar .rk:disabled{opacity:.45}
+.ask{display:flex;flex-direction:column;gap:14px;margin-top:4px;white-space:normal}
+.ask.sending{opacity:.6;pointer-events:none}
+.ask .q{display:flex;flex-direction:column;gap:8px}
+.ask .q>small{font-size:13px;line-height:17px;color:var(--text-2)}
+.ask .q>b{font-weight:600}
+.ask .q>p{margin:0;font-size:15px;line-height:20px;color:var(--text-2)}
+.ask .opts{display:flex;flex-direction:column;gap:6px}
+.ask .opt{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;width:100%;min-height:48px;padding:10px 14px;border-radius:14px;background:var(--field);color:var(--text);text-align:left;font-size:16px;line-height:21px}
+.ask .opt small{font-size:13px;line-height:17px;color:var(--text-2)}
+.ask .opt.sel{background:var(--tint);color:var(--on-tint)}
+.ask .opt.sel small{color:inherit}
+.ask .field{height:44px;font-size:16px}
+.askbar{display:flex;justify-content:flex-end;align-items:center;gap:8px}
+.askbar .pill{margin:0}
+.chatbar .rk{width:48px;height:48px;flex:none;display:grid;place-items:center;border-radius:50%;background:var(--field);color:var(--text);touch-action:none;-webkit-user-select:none;user-select:none}
+.chatbar .rk.send{background:var(--tint);color:var(--on-tint)}
+.chatbar .rk.held{background:var(--tint);color:var(--on-tint)}
+/* Swifty's figure waits in the middle of an empty chat, then keeps the margin beside its own answers. Messages gather at the bottom, next to it */
+.chat,.swf{--swg:60px;--swd:110px}
+.chat.lone{align-items:center;text-align:center}
+.chat.lone .quiet{max-width:30ch}
+.chat:not(.lone){padding-left:var(--swg);justify-content:flex-end}
+.chat:not(.lone) .msg{max-width:100%}
+.swhero{width:100%;height:210px;flex:none}
+.swf{position:sticky;bottom:56px;height:0;margin-top:-18px;z-index:2;pointer-events:none}
+.swf .fig{position:absolute;left:calc(var(--swg)/2 - var(--swd)/2);bottom:calc(25px - var(--swd)/2);width:var(--swd);height:var(--swd);will-change:transform}
+.swf canvas,.swf svg{display:block;width:100%;height:100%}
+.swf i{position:absolute;left:30%;top:28%;width:40%;height:44%;border-radius:50%;pointer-events:auto;touch-action:pan-y}
+@media (min-width:700px){.chat,.swf{--swg:84px;--swd:150px}.chat{min-height:340px}.chat:not(.lone) .msg{max-width:92%}.swhero{height:270px}}
+@media (max-height:560px){.chat{min-height:0}.chat.lone{flex-direction:row;text-align:left}.swhero{width:132px;height:112px}}
+/* at a shell on the owner's machines the chat turns terminal: the whole sheet goes dark behind falling code and takes green for its tint, in either theme. Where :has() is missing only the figure changes */
+.rain{position:absolute;left:0;top:0;z-index:-1;pointer-events:none;background:#040B08;opacity:0;transition:opacity .7s}
+@supports selector(:has(a)){
+  #sheet:has(.chat.hack){--sheet-solid:#07160E;--text:#CDF8D8;--text-2:rgba(205,248,216,.78);--text-3:rgba(205,248,216,.62);--field:rgba(74,255,144,.1);--tint:#0E8038;--tint-soft:#2BC866;--tint-wash:rgba(52,214,118,.16);--on-tint:#F3FFF6;--red:#FF9485;--glass-edge:rgba(120,255,170,.5);--glass-edge-2:rgba(120,255,170,.13);--glass-sheen:rgba(120,255,170,.07);--gh:140!important;--ga:.2!important;color:var(--text);color-scheme:dark}
+  #sheet:has(.chat.hack) .rain{opacity:1}
+  #sheet:has(.chat.hack) .msg.ai{background:rgba(6,20,13,.8);box-shadow:inset 0 0 0 1px rgba(74,255,144,.18)}
+  #sheet:has(.chat.hack) .chatbar .field,#sheet:has(.chat.hack) .chatbar .rk:not(.send):not(.held){background:rgba(10,30,19,.88)}
+  #sheet:has(.chat.hack) .msg .tools{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#7BEFA5}
+}
+.tvbar{--r:26px;display:flex;align-items:center;gap:8px;padding:10px 12px 10px 18px;touch-action:manipulation}
+.tvbar .tvname{flex:1;min-width:0;display:flex;flex-direction:column;text-align:left;color:inherit}
+.tvbar .tvname b{font-size:17px;font-weight:500}
+.tvbar .tvname small{font-size:13px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tvbar .rk{width:48px;height:48px;flex:none;display:grid;place-items:center;border-radius:50%;background:var(--field);color:var(--text);transition:transform .45s var(--spring),background .3s,opacity .3s}
+.tvbar .rk:active{transform:scale(.94)}
+.tvbar .rk:disabled{opacity:.4}
+.tvbar .rk.on{background:var(--tint);color:var(--on-tint)}
+@media (max-width:460px){.tvbar{gap:6px;padding:8px 10px 8px 14px}.tvbar .rk{width:42px;height:42px}}
+.tile.plugt{flex-direction:row;align-items:center;justify-content:space-between;gap:12px}
+.plugopen{flex:1;min-width:0;align-self:stretch;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:8px;text-align:left;color:inherit;cursor:pointer}
+.counts button{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:16px;background:var(--field);min-height:64px;color:var(--text);transition:transform .45s var(--spring)}
+.counts button:active{transform:scale(.97)}
+.counts button b{font-size:24px;font-weight:600;line-height:1.1}
+.counts button small{font-size:13px;color:var(--text-2)}
+.counts button.bad{background:var(--red-wash)}
+.counts button.bad b{color:var(--red)}
+.counts button.na b{color:var(--text-2)}
+.term{background:var(--term-bg);color:var(--term-fg);border-radius:18px;padding:14px 16px;font:15px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;min-height:220px;max-height:340px;overflow:auto;white-space:pre}
+.term .p{color:var(--term-ok)}
+.term .d{color:var(--term-dim)}
+.term .cur{display:inline-block;width:9px;height:17px;background:var(--term-fg);vertical-align:-3px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.cmdline{display:flex;gap:8px;align-items:center}
+.cmdline .field{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:15px}
+.who{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:14px}
+.code{display:block;background:var(--field);border-radius:14px;padding:12px 14px;font:15px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-all;-webkit-user-select:all;user-select:all}
+.copyrow{display:flex;gap:10px;align-items:stretch}
+.copyrow .code{flex:1;min-width:0}
+.copyrow .btn{flex:none;min-height:48px;padding:0 16px}
+#am-panel{display:flex;flex-direction:column;gap:18px}
+
+.inline-edit{display:flex;gap:8px;align-items:center}
+.inline-edit .field{height:48px;flex:1;width:auto;min-width:0}
+.inline-edit .btn{flex:none}
+#te-core-legend:empty,#te-ram:empty{display:none}
+.inline-edit .field.cur{flex:0 0 88px;text-align:center;text-transform:uppercase}
+/* the electricity tariff: labelled fields as in the setup wizard, one even rhythm between the groups */
+.tariff{display:flex;flex-direction:column;gap:14px;margin-top:22px}
+.tariff .roomhead{margin:0}
+.tariff-price{display:grid;grid-template-columns:minmax(0,1fr) 112px;gap:10px}
+.tariff-price .field[data-cur]{text-align:center;text-transform:uppercase}
+.tariff-price .field[data-cur]::placeholder{text-transform:none}
+.tariff-group{display:flex;flex-direction:column;gap:14px}
+.tariff-group[hidden]{display:none}
+.tariff .field{height:48px}
+.times{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:10px;align-items:center}
+.times .field{width:100%;min-width:0;padding:0 14px}
+.times .to{color:var(--text-2)}
+.tariff-save{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:4px}
+.tariff-save .fine{flex:1 1 200px}
+.okword{color:var(--ok);font-weight:500}
+.badword{color:var(--red);font-weight:500}
+.rowi .v small{display:block;font-size:13px;color:var(--text-3);font-weight:400}
+
+/* ---------- confirm pages: each consequence on its own line, the owner's notes marked as theirs ---------- */
+.conseq{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;font-size:17px;line-height:1.35}
+.conseq li{display:flex;gap:10px;align-items:flex-start;min-width:0}
+.conseq li::before{content:"";flex:none;width:6px;height:6px;border-radius:50%;background:var(--text-3);margin-top:9px}
+.conseq li.note::before{display:none}
+.conseq li.note .ic{flex:none;width:18px;height:18px;margin-top:2px;color:var(--tint)}
+.conseq li small{display:block;font-size:13px;color:var(--text-2)}
+.warnline{display:flex;gap:10px;align-items:flex-start;color:var(--amber);font-weight:500;font-size:17px}
+.warnline .ic{flex:none;margin-top:2px}
+
+/* ---------- notes on a device ---------- */
+.notes{display:flex;flex-direction:column;gap:10px}
+.notelist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;font-size:17px;line-height:1.35}
+.notelist li{display:flex;gap:10px;align-items:flex-start;min-width:0}
+.notelist .ic{flex:none;width:18px;height:18px;margin-top:2px;color:var(--text-3)}
+textarea.field.notesed,textarea.field.area{height:auto;min-height:124px;border-radius:20px;padding:14px 18px;line-height:1.4;font-family:inherit;resize:vertical}
+[data-notes-editor]{display:flex;flex-direction:column;gap:10px}
+[data-notes-editor][hidden]{display:none}
+
+/* ---------- the generic card's forms ---------- */
+.actforms{display:flex;flex-direction:column;gap:14px}
+.actform{display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:22px;border:1px solid var(--line)}
+.actform .t b{font-weight:500;display:block}
+.actform .t small{font-size:15px;color:var(--text-2);display:block}
+.pfield{display:flex;flex-direction:column;gap:6px;font-size:17px}
+.pfield>span{font-weight:500}
+.pfield small{font-size:15px;color:var(--text-2)}
+.actform .rowi.pfield{flex-direction:row;align-items:center;border-top:0;padding:0;min-height:48px}
+
+/* ---------- integrations ---------- */
+.badges{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 2px}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:500;padding:2px 10px 2px 8px;border-radius:999px;background:var(--field);color:var(--text-2);white-space:nowrap}
+.badge .ic{width:14px;height:14px}
+.badge.cloud{color:var(--text)}
+.badge.warn{background:var(--amber-wash);color:var(--amber)}
+.confirm.warnbox{background:var(--amber-wash)}
+.confirm.warnbox .sent{display:flex;align-items:center;gap:10px;font-size:18px}
+.confirm.warnbox .sent .ic{color:var(--amber);flex:none}
+
+/* ---------- the setup wizard ---------- */
+.wizhead{display:flex;align-items:center;gap:10px;color:var(--text-2);font-size:15px;font-weight:500}
+.wizhead .fine{margin-left:auto}
+.sform{display:flex;flex-direction:column;gap:16px}
+.sfield{display:flex;flex-direction:column;gap:6px;font-size:17px;min-width:0}
+.sfield .sl{font-weight:500}
+.sfield small{font-size:15px;color:var(--text-2)}
+.sfield.rowi{flex-direction:row;align-items:center;border-top:0;padding:0}
+.sfield .segc{width:100%}
+select.field{-webkit-appearance:none;appearance:none;padding-right:40px;background-image:linear-gradient(45deg,transparent 50%,var(--text-2) 50%),linear-gradient(135deg,var(--text-2) 50%,transparent 50%);background-position:calc(100% - 22px) 50%,calc(100% - 16px) 50%;background-size:6px 6px;background-repeat:no-repeat}
+.field.masked{-webkit-text-security:disc}
+.field[aria-invalid="true"]{outline:3px solid var(--red)}
+.waitbox{display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:20px;background:var(--field);font-size:17px}
+.waitbox .pend{position:static}
+.choices .rowi{min-height:60px}
+
+/* ---------- responsive ---------- */
+@media (max-width:1099px){
+  .row.main{grid-template-columns:1fr}
+  .tile.h220.music{min-height:120px}
+}
+@media (max-width:699px){
+  .top{padding:4px 0 12px}
+  .top .capsule{display:none}
+  .wrap{padding-block:max(8px,env(safe-area-inset-top,0px)) 100px}
+  h1.title{font-size:28px;line-height:34px}
+  .top.compact h1.title{font-size:20px;line-height:26px}
+  .view{gap:14px}
+  .row{gap:12px}
+  #scenes{display:none}
+  .tile.h220{min-height:140px;--tp:18px 20px}
+  .tile.h220.music{min-height:96px}
+  .tile .big{font-size:40px}
+  .tile.h112{min-height:92px;--tp:12px 10px;align-items:center;text-align:center}
+  .tile.comp .name{font-size:15px}
+  .tile.comp .word{font-size:15px}
+  .row.small{grid-template-columns:repeat(2,1fr);gap:12px}
+  .cap{min-height:68px;--r:24px;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;padding:8px 16px}
+  .cap .ic{display:none}
+  .cap .st{margin-left:0;font-size:15px;max-width:100%}
+  body.owner #c-camera{display:none}
+  .simnote{text-align:left;margin-top:16px}
+  #sheet .shead h2{font-size:24px}
+  .row.comps{grid-template-columns:repeat(4,1fr)}
+  #t-host{grid-column:1/-1;flex-direction:row;align-items:center;justify-content:flex-start;gap:12px;text-align:left;min-height:64px}
+  #t-host .inner{flex-direction:row;align-items:center;justify-content:flex-start;gap:14px;flex:1}
+  #t-host .word{display:inline-flex;align-items:center;white-space:nowrap}
+  #t-host .head{flex:none}
+  .roomgrid{grid-template-columns:repeat(2,1fr)}
+  .roomgrid .tile.h220{min-height:120px}
+  .counts{grid-template-columns:repeat(2,1fr)}
+  .rangec button{height:48px}
+}
+@media (min-width:700px){
+  .bottomcap{display:none}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+  #scene .bloom{animation:none}
+  .hold.holding .hf{transition-duration:1.5s!important}
+}

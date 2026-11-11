@@ -1,0 +1,33 @@
+{
+  "plugin": "petkit",
+  "source": "plugins/petkit/src/config.rs",
+  "config_version": 1,
+  "root": "PetkitConfig",
+  "structs": {
+    "PetkitConfig": {
+      "region": { "type": "string", "format": "region", "max_len": 32 },
+      "timezone": { "type": "string", "optional": true, "format": "timezone", "max_len": 64 },
+      "utc_offset_minutes": { "type": "i32", "optional": true, "min": -840, "max": 840 },
+      "commands": { "type": "bool", "optional": true },
+      "feeder_id": { "type": "u64", "optional": true, "nullable": true, "min": 1 },
+      "litter_id": { "type": "u64", "optional": true, "nullable": true, "min": 1 },
+      "passport_url": { "type": "string", "optional": true, "format": "url", "schemes": ["http", "https"], "https_unless_loopback": true },
+      "poll_secs": { "type": "u64", "optional": true, "min": 15, "max": 600 },
+      "app_version": { "type": "string", "optional": true },
+      "user_agent": { "type": "string", "optional": true },
+      "os_version": { "type": "string", "optional": true },
+      "phone_model": { "type": "string", "optional": true },
+      "phone_brand": { "type": "string", "optional": true }
+    }
+  },
+  "secrets": [{ "slot": "login", "required": true }],
+  "example": {
+    "region": "DE",
+    "timezone": "Europe/Paris",
+    "utc_offset_minutes": 120,
+    "commands": true,
+    "feeder_id": 12345,
+    "litter_id": 67890,
+    "poll_secs": 120
+  }
+}

@@ -1,0 +1,12 @@
+# Runs swifty-home-backup.service once a night. A night the machine was off is made up
+# for at the next boot.
+[Unit]
+Description=Nightly Swifty Home backup
+
+[Timer]
+OnCalendar=*-*-* 04:30:00
+RandomizedDelaySec=30min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

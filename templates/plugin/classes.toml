@@ -1,0 +1,298 @@
+# The device classes `swifty plugin new --class` knows, and the code each one adds
+# to a new plugin. The files next to this one are the plugin itself; the snippets
+# here fill its class-specific places:
+#
+#   variant       the DeviceClass variant
+#   thing         the start of a device's default name ("Socket 1")
+#   does          what it can do, in a few words, for the README
+#   capabilities  what a device of this class can do (protocol.rs)
+#   encode        match arms: an Op to the fields to set on the device (protocol.rs)
+#   decode        the match arm that turns the device's fields into a State (protocol.rs)
+#   initial       the stand-in device's fields at the start (tests/common/mod.rs)
+#   ops           operations the tests and the conformance suite run, in order
+#   rules         what the stand-in device does beyond storing what it is sent
+#
+# vm, host and router are not here: they need the machine extension and a passkey
+# approval for every device. Start from plugins/proxmox for those.
+
+[plug]
+does = "switch on and off"
+variant = "Plug"
+thing = "Socket"
+capabilities = "vec![Capability::Power]"
+encode = """
+(DeviceClass::Plug, Op::PlugPower { on }) => Ok(fields(&[("power", json!(on))])),
+"""
+decode = """
+DeviceClass::Plug => Ok(State::Plug { on: flag(fields, "power")? }),
+"""
+initial = '{ "power": false }'
+ops = """
+Op::PlugPower { on: true }
+Op::PlugPower { on: false }
+"""
+
+[light]
+does = "switch, dim and colour"
+variant = "Light"
+thing = "Light"
+capabilities = "vec![Capability::Power, Capability::Brightness { min: 1 }, Capability::Color]"
+encode = """
+(DeviceClass::Light, Op::LightPower { on }) => Ok(fields(&[("power", json!(on))])),
+(DeviceClass::Light, Op::LightBrightness { percent }) => {
+    Ok(fields(&[("power", json!(*percent > 0)), ("brightness", json!(percent))]))
+}
+(DeviceClass::Light, Op::LightHue { hue }) => {
+    Ok(fields(&[("power", json!(true)), ("hue", json!(hue)), ("color", json!(true))]))
+}
+(DeviceClass::Light, Op::LightSet { percent, hue }) => Ok(fields(&[
+    ("power", json!(*percent > 0)),
+    ("brightness", json!(percent)),
+    ("hue", json!(hue)),
+    ("color", json!(true)),
+])),
+"""
+decode = """
+DeviceClass::Light => Ok(State::Light {
+    on: flag(fields, "power")?,
+    bri: byte(fields, "brightness")?,
+    hue: angle(fields, "hue")?,
+    color: flag(fields, "color")?,
+}),
+"""
+initial = '{ "power": false, "brightness": 50, "hue": 30, "color": false }'
+ops = """
+Op::LightPower { on: true }
+Op::LightBrightness { percent: 40 }
+Op::LightHue { hue: 200 }
+Op::LightSet { percent: 80, hue: 120 }
+Op::LightPower { on: false }
+"""
+
+[speaker]
+does = "volume, mute, play and pause"
+variant = "Speaker"
+thing = "Speaker"
+capabilities = "vec![Capability::Volume, Capability::Mute, Capability::Transport]"
+encode = """
+(DeviceClass::Speaker, Op::Volume { level }) => Ok(fields(&[("volume", json!(level))])),
+(DeviceClass::Speaker, Op::VolumeCap { max }) => Ok(fields(&[("volume_max", json!(max))])),
+(DeviceClass::Speaker, Op::Mute { muted }) => Ok(fields(&[("mute", json!(muted))])),
+(DeviceClass::Speaker, Op::Play) => Ok(fields(&[("playing", json!(true))])),
+(DeviceClass::Speaker, Op::Pause) => Ok(fields(&[("playing", json!(false))])),
+"""
+decode = """
+DeviceClass::Speaker => Ok(State::Speaker {
+    vol: byte(fields, "volume")?,
+    mute: flag(fields, "mute")?,
+    playing: flag(fields, "playing")?,
+    source: maybe_text(fields, "source").unwrap_or_default(),
+    night: None,
+}),
+"""
+initial = '{ "volume": 20, "mute": false, "playing": false, "source": "line-in" }'
+ops = """
+Op::Volume { level: 35 }
+Op::VolumeCap { max: 30 }
+Op::Mute { muted: true }
+Op::Mute { muted: false }
+Op::Play
+Op::Pause
+"""
+rules = """
+// It lowers the volume to at most `volume_max`, and leaves a lower one alone.
+if let Some(max) = state.remove("volume_max").and_then(|max| max.as_u64()) {
+    let volume = state.get("volume").and_then(Value::as_u64).unwrap_or(0).min(max);
+    state.insert("volume".into(), json!(volume));
+}
+"""
+
+[tv]
+does = "switch on and off, change input"
+variant = "Tv"
+thing = "TV"
+capabilities = 'vec![Capability::Power, Capability::Inputs { inputs: words(&["HDMI 1", "HDMI 2"]) }]'
+encode = """
+(DeviceClass::Tv, Op::TvPower { on }) => Ok(fields(&[("power", json!(on))])),
+(DeviceClass::Tv, Op::TvInput { input }) => Ok(fields(&[("input", json!(input))])),
+"""
+decode = """
+DeviceClass::Tv => {
+    Ok(State::Tv { on: flag(fields, "power")?, input: maybe_text(fields, "input").unwrap_or_default() })
+}
+"""
+initial = '{ "power": false, "input": "HDMI 1" }'
+ops = """
+Op::TvPower { on: true }
+Op::TvInput { input: "HDMI 2".to_string() }
+Op::TvPower { on: false }
+"""
+
+[aircon]
+does = "switch, mode, target temperature, fan speed"
+variant = "Aircon"
+thing = "Air conditioner"
+capabilities = """vec![
+    Capability::Power,
+    Capability::Mode { modes: words(&["auto", "cool", "heat", "dry", "fan"]) },
+    Capability::Temperature { min: 16, max: 30 },
+    Capability::Fan { speeds: words(&["auto", "low", "medium", "high"]) },
+]"""
+encode = """
+(DeviceClass::Aircon, Op::AirconPower { on }) => Ok(fields(&[("power", json!(on))])),
+(DeviceClass::Aircon, Op::AirconMode { mode }) => Ok(fields(&[("mode", json!(mode))])),
+(DeviceClass::Aircon, Op::AirconTemp { celsius }) => Ok(fields(&[("target", json!(celsius))])),
+(DeviceClass::Aircon, Op::AirconFan { fan }) => Ok(fields(&[("fan", json!(fan))])),
+"""
+decode = """
+DeviceClass::Aircon => Ok(State::Aircon {
+    on: flag(fields, "power")?,
+    mode: maybe_text(fields, "mode"),
+    target: maybe_degrees(fields, "target"),
+    fan: maybe_text(fields, "fan"),
+    indoor: maybe_degrees(fields, "indoor"),
+    outdoor: maybe_degrees(fields, "outdoor"),
+}),
+"""
+initial = '{ "power": false, "mode": "auto", "target": 22, "fan": "auto", "indoor": 21 }'
+ops = """
+Op::AirconPower { on: true }
+Op::AirconMode { mode: "cool".to_string() }
+Op::AirconTemp { celsius: 21 }
+Op::AirconFan { fan: "low".to_string() }
+Op::AirconPower { on: false }
+"""
+
+[feeder]
+does = "put out a portion of food"
+variant = "Feeder"
+thing = "Feeder"
+capabilities = "vec![Capability::Dispense { grams: vec![5, 10, 20] }]"
+encode = """
+(DeviceClass::Feeder, Op::PetFeed { grams }) => Ok(fields(&[("feed", json!(grams))])),
+"""
+decode = """
+DeviceClass::Feeder => {
+    Ok(State::Feeder { last: maybe_text(fields, "last"), portions: count(fields, "portions")? })
+}
+"""
+initial = '{ "portions": 0 }'
+ops = """
+Op::PetFeed { grams: 10 }
+"""
+rules = """
+// It counts each portion it puts out.
+if state.remove("feed").is_some() {
+    let portions = state.get("portions").and_then(Value::as_u64).unwrap_or(0) + 1;
+    state.insert("portions".into(), json!(portions));
+    state.insert("last".into(), json!("just now"));
+}
+"""
+
+[litter]
+does = "start a cleaning cycle"
+variant = "Litter"
+thing = "Litter box"
+capabilities = "vec![Capability::Clean]"
+encode = """
+(DeviceClass::Litter, Op::LitterClean) => Ok(fields(&[("clean", json!(true))])),
+"""
+decode = """
+DeviceClass::Litter => Ok(State::Litter {
+    last: maybe_text(fields, "last"),
+    busy: flag(fields, "busy")?,
+    cycles: count(fields, "cycles")?,
+}),
+"""
+initial = '{ "busy": false, "cycles": 0 }'
+ops = """
+Op::LitterClean
+"""
+rules = """
+// A cleaning cycle starts at once and is counted.
+if state.remove("clean").is_some() {
+    let cycles = state.get("cycles").and_then(Value::as_u64).unwrap_or(0) + 1;
+    state.insert("cycles".into(), json!(cycles));
+    state.insert("busy".into(), json!(true));
+}
+"""
+
+[printer]
+does = "start, pause, resume, emergency stop"
+variant = "Printer"
+thing = "Printer"
+capabilities = "vec![Capability::PrintJob, Capability::EmergencyStop]"
+encode = """
+(DeviceClass::Printer, Op::PrintStart | Op::PrintResume) => Ok(fields(&[("state", json!("printing"))])),
+(DeviceClass::Printer, Op::PrintPause) => Ok(fields(&[("state", json!("paused"))])),
+(DeviceClass::Printer, Op::PrintEmergencyStop) => Ok(fields(&[("state", json!("stopped"))])),
+"""
+decode = """
+DeviceClass::Printer => Ok(State::Printer {
+    state: maybe_text(fields, "state").ok_or_else(unreadable)?,
+    nozzle: maybe_real(fields, "nozzle").unwrap_or(0.0),
+    bed: maybe_real(fields, "bed").unwrap_or(0.0),
+    layer: count(fields, "layer").unwrap_or(0),
+    layers: count(fields, "layers").unwrap_or(0),
+    pct: maybe_real(fields, "progress").unwrap_or(0.0),
+}),
+"""
+initial = '{ "state": "standby", "nozzle": 24.0, "bed": 23.0 }'
+ops = """
+Op::PrintStart
+Op::PrintPause
+Op::PrintResume
+Op::PrintEmergencyStop
+"""
+
+[camera]
+does = "report whether it streams"
+variant = "Camera"
+thing = "Camera"
+capabilities = "Vec::new()"
+decode = """
+DeviceClass::Camera => Ok(State::Camera { streaming: flag(fields, "streaming")? }),
+"""
+initial = '{ "streaming": true }'
+
+[bridge]
+does = "report whether it answers"
+variant = "Bridge"
+thing = "Bridge"
+capabilities = "Vec::new()"
+decode = """
+// It answered, so it is reachable.
+DeviceClass::Bridge => Ok(State::Bridge { reachable: maybe_flag(fields, "reachable").unwrap_or(true) }),
+"""
+initial = '{}'
+
+[service]
+does = "report whether it answers"
+variant = "Service"
+thing = "Service"
+capabilities = "Vec::new()"
+decode = """
+// It answered, so it is reachable.
+DeviceClass::Service => Ok(State::Service { reachable: maybe_flag(fields, "reachable").unwrap_or(true) }),
+"""
+initial = '{}'
+
+[telemetry]
+does = "report its readings"
+variant = "Telemetry"
+thing = "Sensor"
+capabilities = "vec![Capability::Metrics]"
+decode = """
+DeviceClass::Telemetry => Ok(State::Telemetry { data: Value::Object(fields.clone()) }),
+"""
+initial = '{ "temperature": 21.5, "humidity": 40 }'
+
+[other]
+does = "report its fields"
+variant = "Other"
+thing = "Device"
+capabilities = "Vec::new()"
+decode = """
+DeviceClass::Other => Ok(State::Custom { fields: scalars(fields) }),
+"""
+initial = '{ "level": 3, "label": "ready" }'

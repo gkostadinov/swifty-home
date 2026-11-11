@@ -1,0 +1,13 @@
+{
+  "plugin": "hue",
+  "source": "plugins/hue/src/config.rs",
+  "config_version": 1,
+  "root": "HueConfig",
+  "structs": {
+    "HueConfig": {
+      "url": { "type": "string", "format": "url", "schemes": ["http", "https"] }
+    }
+  },
+  "secrets": [{ "slot": "app_key", "required": true }],
+  "example": { "url": "https://192.0.2.1:8443/" }
+}

@@ -1,0 +1,30 @@
+[package]
+name = "swifty-plugin-proxmox"
+description = "Swifty Home plugin for Proxmox VE: VM and host power, status, stored charts, the VNC console and further hosts, with a least-privilege API token"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+name = "swifty_plugin_proxmox"
+path = "src/lib.rs"
+
+[dependencies]
+async-trait.workspace = true
+# The header types the HTTP client and the console relay take. They are the same
+# types swifty-net uses; naming them here opens no socket.
+http = "1"
+serde.workspace = true
+serde_json.workspace = true
+swifty-net.workspace = true
+swifty-plugin-api.workspace = true
+tracing.workspace = true
+url.workspace = true
+
+[dev-dependencies]
+rcgen.workspace = true
+swifty-plugin-testkit.workspace = true
+tempfile.workspace = true
+tokio.workspace = true

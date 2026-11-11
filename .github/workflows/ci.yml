@@ -1,0 +1,207 @@
+# Every push and pull request: format, lint, tests on Linux and Windows,
+# licences and advisories, the secret scan, the public-tree scan, the plugins' source checks, and the
+# Windows speech service's format, lint and tests. The toolchain comes from
+# rust-toolchain.toml, so CI builds with the same compiler as a checkout.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  # The workspace's test count may not fall below this. It is raised at the
+  # start of each wave, never lowered.
+  TEST_BASE: "1615"
+
+jobs:
+  fmt:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the pinned toolchain
+        run: rustup toolchain install
+      - run: rustup component add rustfmt
+      - run: cargo fmt --all --check
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the pinned toolchain
+        run: rustup toolchain install
+      - run: rustup component add clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+  test:
+    name: Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    env:
+      # The whole workspace's test build is large; line tables keep backtraces and drop the rest.
+      CARGO_PROFILE_DEV_DEBUG: line-tables-only
+    steps:
+      - uses: actions/checkout@v4
+      # The Linux runner's disk is small: the linker ran out of room (a bus error) without this.
+      - name: Make room on the Linux runner
+        if: runner.os == 'Linux'
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+      - name: Install the pinned toolchain
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - name: Test, and check the count against the base
+        # bash on Windows too, so `--` reaches cargo as it is.
+        shell: bash
+        run: cargo xtask count-tests --min ${{ env.TEST_BASE }} -- --locked
+
+  deny:
+    name: Licences and advisories
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the pinned toolchain
+        run: rustup toolchain install
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
+      - run: cargo deny --locked check
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash tools/scan-secrets.sh .
+      # The scanner's own checks: what it reports, what it lets through, its allow list.
+      - run: bash tools/scan-secrets-test.sh
+
+  public-tree:
+    name: Public tree
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the pinned toolchain
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      # The generic rules: no MAC address, IPv4 address, e-mail address,
+      # domain or home-directory path that is not a documentation value or on the short lists
+      # in xtask/src/check_public_tree.rs. The private word list is never here: the
+      # maintainer runs the same command with --denylist before every publish.
+      - run: cargo xtask check-public-tree
+
+  plugins:
+    name: Plugin source checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the pinned toolchain
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      # The tests, clippy and cargo deny of every plugin already run in the jobs
+      # above; this adds what only check-plugin looks at: no socket, process or
+      # environment named in a plugin's source or tests, no network client in its
+      # dependencies, unsafe code forbidden, and a conformance test.
+      - name: cargo xtask check-plugin, static checks, on every plugin
+        run: |
+          for dir in plugins/*/; do
+            cargo xtask check-plugin "${dir%/}" --static-only
+          done
+
+  plugin-kit:
+    name: Plugin reference and template
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the pinned toolchain
+        run: rustup toolchain install
+      - run: rustup component add rustfmt clippy
+      - uses: Swatinem/rust-cache@v2
+      # docs/plugins/reference, and the code the plugin guides quote, must be what the code says.
+      - run: cargo xtask gen-docs --check
+      # A plugin made from the template for every class, local and cloud, must pass fmt, clippy
+      # and its own tests, the conformance suite included.
+      - run: cargo xtask check-template
+
+  docs:
+    name: Documentation commands
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the pinned toolchain
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build -p swifty --locked
+      # Every relative link of the user documentation, and every `swifty` command in it, run
+      # against a scratch hub. --strict: nothing may be pending.
+      - run: bash docs/doctest.sh --binary target/debug/swifty --strict
+
+  openapi:
+    name: OpenAPI document
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the pinned toolchain
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      # docs/api/openapi.v1.json must be the document the router makes.
+      - run: cargo xtask openapi --check
+
+  speech:
+    name: Speech service (Windows)
+    # services/swifty-speech is outside the workspace, with its own lock file and
+    # toolchain, and builds only on Windows.
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: services/swifty-speech
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the pinned toolchain
+        run: rustup toolchain install
+      - run: rustup component add rustfmt clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: services/swifty-speech
+      - name: Fetch the sherpa-onnx archive package.ps1 names, and check its SHA-256
+        # The same archive and hash as a release build, read from package.ps1 so
+        # there is one place to change them. With SHERPA_ONNX_ARCHIVE_DIR set, the
+        # crate's build script uses this archive and never downloads its own.
+        run: |
+          $script = Get-Content -LiteralPath package.ps1 -Raw
+          function Read-Setting([string]$Name) {
+            $found = [regex]::Match($script, '\$' + $Name + " = '([^']+)'")
+            if (-not $found.Success) { throw "package.ps1 no longer sets $Name" }
+            return $found.Groups[1].Value
+          }
+          $version = Read-Setting 'SherpaVersion'
+          $sha256 = Read-Setting 'SherpaArchiveSha256'
+          $archive = "sherpa-onnx-v$version-win-x64-static-MT-Release-lib.tar.bz2"
+          $dir = Join-Path $env:RUNNER_TEMP 'sherpa-onnx-prebuilt'
+          New-Item -ItemType Directory -Path $dir -Force | Out-Null
+          $path = Join-Path $dir $archive
+          Invoke-WebRequest -Uri "https://github.com/k2-fsa/sherpa-onnx/releases/download/v$version/$archive" -OutFile $path
+          $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $path).Hash.ToLowerInvariant()
+          if ($actual -ne $sha256) { throw "the sherpa-onnx archive's SHA-256 is $actual, not $sha256" }
+          "SHERPA_ONNX_ARCHIVE_DIR=$dir" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - run: cargo fmt --check
+      - run: cargo clippy --locked --all-targets -- -D warnings
+      - run: cargo test --locked

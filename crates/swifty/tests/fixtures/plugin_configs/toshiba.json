@@ -1,0 +1,29 @@
+{
+  "plugin": "toshiba",
+  "source": "plugins/toshiba/src/config.rs",
+  "config_version": 1,
+  "root": "ToshibaConfig",
+  "structs": {
+    "ToshibaConfig": {
+      "api_url": { "type": "string", "optional": true, "format": "url", "schemes": ["http", "https"], "https_unless_loopback": true },
+      "hub_url": { "type": "string", "optional": true, "format": "url", "schemes": ["http", "https"], "https_unless_loopback": true },
+      "timeout_ms": { "type": "u64", "optional": true, "min": 1, "max": 30000 },
+      "client_suffix": { "type": "string", "optional": true, "format": "hex", "max_len": 64 },
+      "user_agent": { "type": "string", "optional": true, "max_len": 256 },
+      "units": { "type": "rows", "of": "AirconConfig", "min_rows": 1, "max_rows": 8 }
+    },
+    "AirconConfig": {
+      "id": { "type": "string", "format": "aircon_id" },
+      "unique_id": { "type": "string", "format": "unique_id" },
+      "name": { "type": "string", "optional": true, "nullable": true, "format": "plain_name", "max_len": 64 }
+    }
+  },
+  "unique": [["units", "id"]],
+  "secrets": [{ "slot": "login", "required": true }],
+  "example": {
+    "units": [{ "id": "0a1b2c3d-1111-2222-3333-444455556666", "unique_id": "AB-12:cd", "name": "Lounge" }],
+    "client_suffix": "6f6c64687562",
+    "timeout_ms": 30000,
+    "hub_url": "https://h.azure-devices.net"
+  }
+}

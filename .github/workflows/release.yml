@@ -1,0 +1,398 @@
+# Release builds and the packaging checks.
+#
+# On a tag v<version> (the workspace version in Cargo.toml, with a leading v):
+#   1. check:   shellcheck, systemd-analyze verify, the image build, and install.sh in
+#               clean Debian and Alpine containers with a locally built archive.
+#   2. notices: THIRD-PARTY-NOTICES.txt from cargo-about (packaging/notices).
+#   3. build:   the static musl binary for x86_64 and aarch64, each built natively inside
+#               packaging/docker/Dockerfile, and the image for that architecture pushed
+#               by digest. The binary in the archive is the one in the image.
+#   4. pack:    `cargo xtask dist` makes swifty-home-<version>-<arch>-linux.tar.gz for
+#               both; SHA256SUMS is written and signed; install.sh gets the repository,
+#               version and public key filled in; the GitHub release is published.
+#   5. image:   ghcr.io/gkostadinov/swifty-home:<version> (and :latest for a final release)
+#               as one multi-architecture image.
+#
+# By hand (workflow_dispatch): the same without signing or publishing; the archives are
+# kept as a workflow artifact. On a pull request that touches packaging: `check` only.
+#
+# Signing. SHA256SUMS is signed with `ssh-keygen -Y sign`, namespace swifty-home-release.
+# Before the first release the maintainer creates an Ed25519 key with no passphrase:
+#   ssh-keygen -t ed25519 -N '' -C swifty-home-release -f release-signing
+# commits release-signing.pub as packaging/release-signing.pub, stores the private key in
+# the repository secret RELEASE_SIGNING_KEY, and keeps an offline copy. The release stops
+# if either is missing, and checks the signature with the committed key before publishing.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+    paths:
+      - "packaging/**"
+      - "xtask/src/dist.rs"
+      - ".github/workflows/release.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: Packaging checks
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: shellcheck
+        run: shellcheck --shell=sh --severity=style packaging/install.sh
+
+      - name: The units pass systemd-analyze verify
+        # The runner has no /usr/local/bin/swifty, which verify would report, so the copy
+        # it checks runs /usr/bin/true instead. Every other line is checked as shipped.
+        run: |
+          dir=$(mktemp -d)
+          cp packaging/systemd/swifty-home.service packaging/systemd/swifty-home-backup.service \
+            packaging/systemd/swifty-home-backup.timer "$dir/"
+          sed -i 's#^ExecStart=/usr/local/bin/swifty #ExecStart=/usr/bin/true #' "$dir"/*.service
+          systemd-analyze verify --man=no "$dir/swifty-home.service" \
+            "$dir/swifty-home-backup.service" "$dir/swifty-home-backup.timer"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build the image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: packaging/docker/Dockerfile
+          platforms: linux/amd64
+          load: true
+          tags: swifty-home:check
+          cache-from: type=gha,scope=check
+          cache-to: type=gha,mode=max,scope=check
+
+      - name: The image runs, and its first run writes a valid config
+        run: |
+          docker run --rm swifty-home:check version
+          docker volume create swifty-check-config
+          docker volume create swifty-check-data
+          volumes="-v swifty-check-config:/etc/swifty-home -v swifty-check-data:/var/lib/swifty-home"
+          # shellcheck disable=SC2086 # two -v options on purpose
+          docker run --rm $volumes swifty-home:check init --yes --origin http://localhost:8790
+          # shellcheck disable=SC2086
+          docker run --rm $volumes swifty-home:check config check --file /etc/swifty-home/swifty.toml
+
+      - name: Install the pinned toolchain
+        run: rustup toolchain install
+
+      - name: Pack an archive from the image's binary
+        run: |
+          id=$(docker create swifty-home:check)
+          mkdir -p bin
+          docker cp "$id:/usr/local/bin/swifty" bin/swifty
+          docker rm "$id"
+          cargo xtask dist --binary bin/swifty --arch x86_64 --without-notices --out dist
+
+      - name: install.sh --yes --no-start in clean containers
+        run: |
+          archive=$(cd dist && ls swifty-home-*-x86_64-linux.tar.gz)
+          cat > test-install.sh <<'EOF'
+          set -eu
+          archive=$1
+          sh /pkg/install.sh --yes --no-start --archive "/dist/$archive"
+          /usr/local/bin/swifty version
+          /usr/local/bin/swifty config check --file /etc/swifty-home/swifty.toml
+          id swifty-home
+          ls -ld /etc/swifty-home /var/lib/swifty-home /var/backups/swifty-home
+          ls -l /etc/swifty-home
+          # A second run upgrades the binary and never touches the config.
+          before=$(cksum < /etc/swifty-home/swifty.toml)
+          sh /pkg/install.sh --yes --no-start --archive "/dist/$archive"
+          [ "$before" = "$(cksum < /etc/swifty-home/swifty.toml)" ]
+          # Uninstall keeps the data; purge removes it.
+          sh /pkg/install.sh --uninstall --yes
+          test ! -e /usr/local/bin/swifty
+          test -f /etc/swifty-home/swifty.toml
+          sh /pkg/install.sh --uninstall --purge --yes
+          test ! -e /etc/swifty-home
+          test ! -e /var/lib/swifty-home
+          if id swifty-home >/dev/null 2>&1; then echo "the user is still there"; exit 1; fi
+          echo "install.sh passed"
+          EOF
+          for image in debian:stable-slim alpine:3; do
+            echo "::group::$image"
+            docker run --rm -v "$PWD/dist:/dist:ro" -v "$PWD/packaging:/pkg:ro" \
+              -v "$PWD/test-install.sh:/test-install.sh:ro" "$image" sh /test-install.sh "$archive"
+            echo "::endgroup::"
+          done
+
+  notices:
+    name: Third-party notices
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the pinned toolchain
+        run: rustup toolchain install
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-about
+      - name: Generate THIRD-PARTY-NOTICES.txt
+        run: |
+          cargo about generate --locked -c packaging/notices/about.toml \
+            -m crates/swifty/Cargo.toml packaging/notices/about.hbs > THIRD-PARTY-NOTICES.txt
+          test -s THIRD-PARTY-NOTICES.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: notices
+          path: THIRD-PARTY-NOTICES.txt
+          if-no-files-found: error
+
+  build:
+    name: Build (${{ matrix.arch }})
+    needs: check
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - arch: x86_64
+            platform: linux/amd64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version, image name and timestamp
+        run: |
+          version=$(sed -n '/^\[workspace\.package\]/,/^\[/s/^version = "\(.*\)"/\1/p' Cargo.toml)
+          if [ "${GITHUB_REF_TYPE}" = tag ] && [ "${GITHUB_REF_NAME#v}" != "$version" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} does not match the workspace version ${version}"
+            exit 1
+          fi
+          {
+            echo "VERSION=$version"
+            echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}"
+            echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)"
+          } >> "$GITHUB_ENV"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build, and take out the image's files
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: packaging/docker/Dockerfile
+          platforms: ${{ matrix.platform }}
+          outputs: type=local,dest=image-fs
+          cache-from: type=gha,scope=${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.arch }}
+
+      - name: The binary is static and runs here
+        run: |
+          file image-fs/usr/local/bin/swifty
+          file image-fs/usr/local/bin/swifty | grep -Eq 'statically linked|static-pie linked'
+          image-fs/usr/local/bin/swifty version
+          mkdir -p bin
+          cp image-fs/usr/local/bin/swifty "bin/swifty-${{ matrix.arch }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.arch }}
+          path: bin/swifty-${{ matrix.arch }}
+          if-no-files-found: error
+
+      - name: Log in to the GitHub container registry
+        if: github.ref_type == 'tag'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push the image by digest
+        id: push
+        if: github.ref_type == 'tag'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: packaging/docker/Dockerfile
+          platforms: ${{ matrix.platform }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ env.VERSION }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=${{ matrix.arch }}
+
+      - name: Keep the digest
+        if: github.ref_type == 'tag'
+        run: |
+          mkdir -p digests
+          digest="${{ steps.push.outputs.digest }}"
+          touch "digests/${digest#sha256:}"
+
+      - uses: actions/upload-artifact@v4
+        if: github.ref_type == 'tag'
+        with:
+          name: digest-${{ matrix.arch }}
+          path: digests/*
+          if-no-files-found: error
+
+  pack:
+    name: Archives, checksums and the release
+    needs: [build, notices]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version and timestamp
+        run: |
+          version=$(sed -n '/^\[workspace\.package\]/,/^\[/s/^version = "\(.*\)"/\1/p' Cargo.toml)
+          {
+            echo "VERSION=$version"
+            echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)"
+          } >> "$GITHUB_ENV"
+
+      - name: Install the pinned toolchain
+        run: rustup toolchain install
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: binary-*
+          path: bin
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: notices
+          path: notices
+
+      - name: Pack both archives
+        run: |
+          for arch in x86_64 aarch64; do
+            cargo xtask dist --binary "bin/swifty-$arch" --arch "$arch" \
+              --notices notices/THIRD-PARTY-NOTICES.txt --out dist
+          done
+          cat dist/SHA256SUMS
+          test "$(wc -l < dist/SHA256SUMS)" -eq 2
+
+      - name: Sign SHA256SUMS
+        if: github.ref_type == 'tag'
+        env:
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+        run: |
+          if [ ! -s packaging/release-signing.pub ]; then
+            echo "::error::packaging/release-signing.pub is missing. See the top of this workflow."
+            exit 1
+          fi
+          if [ -z "$RELEASE_SIGNING_KEY" ]; then
+            echo "::error::the secret RELEASE_SIGNING_KEY is not set. See the top of this workflow."
+            exit 1
+          fi
+          key="$RUNNER_TEMP/release-signing"
+          (umask 077 && printf '%s\n' "$RELEASE_SIGNING_KEY" > "$key")
+          ssh-keygen -Y sign -q -f "$key" -n swifty-home-release dist/SHA256SUMS
+          rm -f "$key"
+          # Check it exactly as install.sh will, with the committed public key.
+          printf 'swifty-home-release namespaces="swifty-home-release" %s\n' \
+            "$(cat packaging/release-signing.pub)" > "$RUNNER_TEMP/allowed_signers"
+          ssh-keygen -Y verify -f "$RUNNER_TEMP/allowed_signers" -I swifty-home-release \
+            -n swifty-home-release -s dist/SHA256SUMS.sig < dist/SHA256SUMS
+
+      - name: Fill in install.sh
+        if: github.ref_type == 'tag'
+        run: |
+          python3 - <<'EOF'
+          import os, pathlib, re
+          text = pathlib.Path("packaging/install.sh").read_text()
+          key = pathlib.Path("packaging/release-signing.pub").read_text().strip()
+          for token, value in (("@REPO@", os.environ["GITHUB_REPOSITORY"]),
+                               ("@VERSION@", os.environ["VERSION"]),
+                               ("@SIGNING_KEY@", key)):
+              if "'" in value or text.count(token) != 1:
+                  raise SystemExit(f"cannot fill {token}")
+              text = text.replace(token, value)
+          if re.search(r"^RELEASE_\w+='@\w+@'$", text, re.M):
+              raise SystemExit("a release placeholder is left in install.sh")
+          pathlib.Path("dist/install.sh").write_text(text)
+          EOF
+          sh -n dist/install.sh
+          grep -n "^RELEASE_" dist/install.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release
+          path: dist/*
+          if-no-files-found: error
+
+      - name: Publish the GitHub release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prerelease=""
+          case "$VERSION" in *-*) prerelease="--prerelease" ;; esac
+          # shellcheck disable=SC2086 # $prerelease is one flag or nothing
+          gh release create "$GITHUB_REF_NAME" --verify-tag --title "Swifty Home $VERSION" \
+            --generate-notes $prerelease \
+            dist/swifty-home-*-linux.tar.gz dist/SHA256SUMS dist/SHA256SUMS.sig dist/install.sh
+
+  image:
+    name: Multi-architecture image
+    needs: [build, pack]
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version and image name
+        run: |
+          version=$(sed -n '/^\[workspace\.package\]/,/^\[/s/^version = "\(.*\)"/\1/p' Cargo.toml)
+          {
+            echo "VERSION=$version"
+            echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}"
+          } >> "$GITHUB_ENV"
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: digest-*
+          path: digests
+          merge-multiple: true
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag one image for both architectures
+        working-directory: digests
+        run: |
+          tags="-t $IMAGE:$VERSION"
+          case "$VERSION" in *-*) ;; *) tags="$tags -t $IMAGE:latest" ;; esac
+          refs=""
+          for digest in *; do refs="$refs $IMAGE@sha256:$digest"; done
+          # shellcheck disable=SC2086 # one -t per tag, one reference per digest
+          docker buildx imagetools create $tags $refs
+          docker buildx imagetools inspect "$IMAGE:$VERSION"

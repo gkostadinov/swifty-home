@@ -1,0 +1,21 @@
+{
+  "plugin": "tuya",
+  "source": "plugins/tuya/src/config.rs",
+  "config_version": 1,
+  "root": "TuyaConfig",
+  "structs": {
+    "TuyaConfig": {
+      "plugs": { "type": "rows", "of": "PlugConfig", "min_rows": 1, "max_rows": 32 }
+    },
+    "PlugConfig": {
+      "id": { "type": "string", "format": "plug_id" },
+      "address": { "type": "string", "format": "ipv4" },
+      "port": { "type": "u16", "optional": true, "min": 1 },
+      "name": { "type": "string", "optional": true, "nullable": true, "format": "plain_name", "max_len": 64 },
+      "usb_dp": { "type": "u16", "optional": true, "nullable": true, "min": 2, "max": 255 }
+    }
+  },
+  "unique": [["plugs", "id"]],
+  "secrets": [{ "slot": "local_key/{id}", "required": true }],
+  "example": { "plugs": [{ "id": "bf0123456789abcdef", "address": "192.0.2.40", "port": 7000, "name": "Desk" }] }
+}

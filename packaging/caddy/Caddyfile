@@ -1,0 +1,48 @@
+# Swifty Home behind Caddy.
+#
+# Passkeys only work on https:// (or on http://localhost). Caddy gets and renews the
+# certificate by itself. Replace home.example.org with your name; it must be exactly the
+# `origin` in /etc/swifty-home/swifty.toml (`rp_id` is the name without https://).
+#
+# A domain you own: point its DNS at this machine and open ports 80 and 443 to it. That is
+# all; Caddy asks Let's Encrypt for the certificate.
+#
+# Home network only (no public DNS): uncomment `tls internal` below. Caddy then signs the
+# certificate with its own local authority, and each phone and computer must trust that
+# authority's root once:
+#   - The root is root.crt under Caddy's data directory: pki/authorities/local/root.crt
+#     (/var/lib/caddy/.local/share/caddy/... for the Debian package, /data/caddy/... in
+#     the Docker image). Copy it to the device. It is a public certificate, not a secret.
+#   - iPhone and iPad: open the file, install the profile under Settings > General >
+#     VPN & Device Management, then turn on full trust under Settings > General > About >
+#     Certificate Trust Settings.
+#   - Android: Settings > Security > Encryption & credentials > Install a certificate >
+#     CA certificate.
+#   - Windows, macOS, Linux: add it to the system's trusted root authorities.
+# The name must still resolve to this machine on your network (a DNS entry on the router,
+# or a hosts file).
+
+home.example.org {
+	# tls internal
+
+	# Voice clips are up to 8 MiB. The hub sets its own, smaller limits on everything else.
+	@voice path /api/v1/voice
+	handle @voice {
+		request_body {
+			max_size 9MB
+		}
+		reverse_proxy 127.0.0.1:8790
+	}
+
+	handle {
+		request_body {
+			max_size 1MB
+		}
+		# Host and Origin pass through unchanged, as the hub requires. The event stream
+		# (/api/v1/events) is flushed as it arrives, and the console's WebSocket upgrade
+		# is proxied as it is.
+		reverse_proxy 127.0.0.1:8790 {
+			flush_interval -1
+		}
+	}
+}

@@ -1,0 +1,13 @@
+{
+  "plugin": "moonraker",
+  "source": "plugins/moonraker/src/config.rs",
+  "config_version": 1,
+  "root": "MoonrakerConfig",
+  "structs": {
+    "MoonrakerConfig": {
+      "url": { "type": "string", "format": "url", "schemes": ["http", "https"] }
+    }
+  },
+  "secrets": [{ "slot": "api_key", "required": false }],
+  "example": { "url": "http://192.0.2.30:7125" }
+}
